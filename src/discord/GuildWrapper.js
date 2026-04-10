@@ -147,9 +147,10 @@ export default class GuildWrapper {
             await RateLimiter.sendDM(this.guild, user, message);
         }
         catch (e) {
-            // TODO: Import CannotSendMessagesToThisUserDueToHavingNoMutualGuilds from RESTJSONErrorCodes when
-            // Discord api types is up-to-date
-            if ([RESTJSONErrorCodes.CannotSendMessagesToThisUser, 50_278].includes(e.code)) {
+            if ([
+                RESTJSONErrorCodes.CannotSendMessagesToThisUser,
+                RESTJSONErrorCodes.CannotSendMessagesToThisUserDueToHavingNoMutualGuilds,
+            ].includes(e.code)) {
                 return false;
             }
             else {
