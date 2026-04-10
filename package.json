@@ -25,7 +25,7 @@
   "dependencies": {
     "@google-cloud/logging": "^11.2.1",
     "@google-cloud/vision": "^5.3.3",
-    "@googleapis/youtube": "^29.0.0",
+    "@googleapis/youtube": "^31.0.0",
     "diff": "^8.0.2",
     "discord-api-types": "^0.38.45",
     "discord.js": "^14.26.2",
@@ -36,11 +36,13 @@
     "turndown": "^7.1.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@eslint/json": "^1.2.0",
     "@types/node": "^22.5.2",
     "@types/turndown": "^5.0.6",
-    "eslint": "^9.9.1",
-    "eslint-plugin-jsdoc": "^61.1.4",
-    "eslint-plugin-json": "^4.0.1",
+    "eslint": "^10.2.0",
+    "eslint-plugin-jsdoc": "^62.9.0",
+    "globals": "^17.4.0",
     "nodemon": "^3.1.10"
   },
   "lint-staged": {

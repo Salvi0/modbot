@@ -1,16 +1,16 @@
 import jsdoc from 'eslint-plugin-jsdoc';
-import json from 'eslint-plugin-json';
+import json from '@eslint/json';
 import globals from 'globals';
 import js from '@eslint/js';
 
 export default [
     js.configs.recommended,
-    json.configs.recommended,
     jsdoc.configs['flat/recommended'],
     {
         files: ['**/*.js'],
         plugins: {
             jsdoc,
+            json,
         },
         rules: {
             'jsdoc/require-param-description': 'off',

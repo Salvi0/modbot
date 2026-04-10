@@ -87,7 +87,7 @@ export default class YouTubePlaylist {
 
         /** @type {YouTubeVideo[]} */
         const videos = [];
-        let totalVideos = 0, nextPageToken = null;
+        let totalVideos, nextPageToken = null;
         do {
             const response = /** @type {PlaylistResponse} */ await youtube.playlistItems.list({
                 auth: config.data.googleApiKey,

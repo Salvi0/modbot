@@ -30,7 +30,7 @@ export default class SlashCommandPermissionManager {
      * @returns {Promise<SlashCommandPermissionOverrides>}
      */
     async fetchOverrides(interaction, commandId = bot.client.user.id) {
-        let overrides = [];
+        let overrides;
         try {
             overrides = await interaction.guild.commands.permissions.fetch({command: commandId});
         }
