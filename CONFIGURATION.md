@@ -16,8 +16,8 @@ Discord bot authentication token, can be generated in the [Developer Portal](htt
 
 ## Database (required)
 MySQL/MariaDB access credentials. Other SQL dialects or Databases are not supported. If you're using a config file,
-you can easily add any additional options accepted by [mysql2](https://www.npmjs.com/package/mysql2). This is not
-possible using environment variables. If you're missing an option just let us know ;)
+you can easily add any additional options accepted by [mysql2](https://www.npmjs.com/package/mysql2). To do this with environment variables, you need
+to encode the entire database configuration JSON object as base64 and set it in the environment variable `MODBOT_DATABASE`.
 
 ### Host
 Database hostname or IP

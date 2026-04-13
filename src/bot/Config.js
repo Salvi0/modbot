@@ -7,7 +7,6 @@ import {exists, readJSON} from '../util/fsutils.js';
  * @property {DatabaseConfig} database
  * @property {?string} googleApiKey
  * @property {?GoogleCloudConfig} googleCloud
- * @property {{enabled: boolean, guild: string}} debug
  * @property {string[]} featureWhitelist
  * @property {Emojis} emoji emoji ids
  */
@@ -79,6 +78,11 @@ import {exists, readJSON} from '../util/fsutils.js';
 
 export class Config {
     /**
+     * @type {object}
+     */
+    #configFile;
+
+    /**
      * @type {ConfigData}
      */
     #data;
@@ -91,108 +95,179 @@ export class Config {
     }
 
     async load() {
-        if (process.env.MODBOT_USE_ENV) {
-            let googleCloudCredentials = process.env.MODBOT_GOOGLE_CLOUD_CREDENTIALS;
-            if (googleCloudCredentials) {
-                googleCloudCredentials = JSON.parse((Buffer.from(googleCloudCredentials, 'base64')).toString());
-            }
-            else {
-                googleCloudCredentials = {
-                    client_email: process.env.MODBOT_GOOGLE_CLOUD_CREDENTIALS_CLIENT_EMAIL,
-                    private_key: process.env.MODBOT_GOOGLE_CLOUD_CREDENTIALS_PRIVATE_KEY?.replaceAll('\\n', '\n'),
-                };
-            }
+        /** @type {string} */
+        const authToken = await this.#get("authToken");
+        if (!authToken || typeof authToken !== "string" || authToken.length < 32) {
+            await logger.error('No valid auth token found.\nConfigure auth token as described in the CONFIGURATION.md');
+            process.exit(1);
+        }
 
+        /** @type {DatabaseConfig} */
+        let database = await this.#get('database', null, this.#parseBase64Json);
+        database.host ??= await this.#get(['database', 'host']);
+        database.user ??= await this.#get(['database', 'user'], "modbot");
+        database.password ??= await this.#get(['database', 'password']);
+        database.database ??= await this.#get(['database', 'database'], "modbot");
+        database.port ??= await this.#get(['database', 'port'], 3306, parseInt);
+        if (typeof database !== 'object' || !database.host) {
+            await logger.error('No valid database host provided.\nConfigure database as described in the CONFIGURATION.md');
+            process.exit(1);
+        }
 
-            // load settings from env
-            this.#data = {
-                authToken: process.env.MODBOT_AUTH_TOKEN,
-                database: {
-                    host: process.env.MODBOT_DATABASE_HOST,
-                    user: process.env.MODBOT_DATABASE_USER ?? 'modbot',
-                    password: process.env.MODBOT_DATABASE_PASSWORD,
-                    database: process.env.MODBOT_DATABASE_DATABASE ?? 'modbot',
-                    port: parseInt(process.env.MODBOT_DATABASE_PORT ?? '3306'),
-                },
-                googleApiKey:  process.env.MODBOT_GOOGLE_API_KEY,
-                googleCloud: {
-                    credentials: googleCloudCredentials,
-                    vision: {
-                        enabled: this.#parseBooleanFromEnv(process.env.MODBOT_GOOGLE_CLOUD_VISION_ENABLED)
-                    },
-                    logging: {
-                        enabled: this.#parseBooleanFromEnv(process.env.MODBOT_GOOGLE_CLOUD_LOGGING_ENABLED),
-                        projectId: process.env.MODBOT_GOOGLE_CLOUD_LOGGING_PROJECT_ID,
-                        logName: process.env.MODBOT_GOOGLE_CLOUD_LOGGING_LOG_NAME,
-                    },
-                },
-                featureWhitelist: (process.env.MODBOT_FEATURE_WHITELIST ?? '').split(/ *, */),
-                emoji: {
-                    source: process.env.MODBOT_EMOJI_SOURCE,
-                    privacy: process.env.MODBOT_EMOJI_PRIVACY,
-                    invite: process.env.MODBOT_EMOJI_INVITE,
-                    discord: process.env.MODBOT_EMOJI_DISCORD,
-                    youtube: process.env.MODBOT_EMOJI_YOUTUBE,
-                    zendesk: process.env.MODBOT_EMOJI_ZENDESK,
-                    firstPage: process.env.MODBOT_EMOJI_FIRST_PAGE,
-                    previousPage: process.env.MODBOT_EMOJI_PREVIOUS_PAGE,
-                    refresh: process.env.MODBOT_EMOJI_REFRESH,
-                    nextPage: process.env.MODBOT_EMOJI_NEXT_PAGE,
-                    lastPage: process.env.MODBOT_EMOJI_LAST_PAGE,
-                    announcement: process.env.MODBOT_EMOJI_ANNOUNCEMENT,
-                    channel: process.env.MODBOT_EMOJI_CHANNEL,
-                    forum: process.env.MODBOT_EMOJI_FORUM,
-                    stage: process.env.MODBOT_EMOJI_STAGE,
-                    thread: process.env.MODBOT_EMOJI_THREAD,
-                    voice: process.env.MODBOT_EMOJI_VOICE,
-                    avatar: process.env.MODBOT_EMOJI_AVATAR,
-                    ban: process.env.MODBOT_EMOJI_BAN,
-                    moderations: process.env.MODBOT_EMOJI_MODERATIONS,
-                    mute: process.env.MODBOT_EMOJI_MUTE,
-                    pardon: process.env.MODBOT_EMOJI_PARDON,
-                    strike: process.env.MODBOT_EMOJI_STRIKE,
-                    kick: process.env.MODBOT_EMOJI_KICK,
-                    userCreated: process.env.MODBOT_EMOJI_USER_CREATED,
-                    userId: process.env.MODBOT_EMOJI_USER_ID,
-                    userJoined: process.env.MODBOT_EMOJI_USER_JOINED,
-                }
+        /** @type {GoogleCloudCredentials} */
+        let googleCloudCredentials = await this.#get(['googleCloud', 'credentials'], null, this.#parseBase64Json);
+        if (!googleCloudCredentials) {
+            googleCloudCredentials = {
+                client_email: await this.#get(['googleCloud', 'credentials', 'client_email']),
+                private_key: (await this.#get(['googleCloud', 'credentials', 'private_key']))?.replaceAll('\\n', '\n'),
             };
         }
-        else {
-            // load settings from file
-            if (!await exists('./config.json')) {
-                await logger.error('No settings file found.\n' +
-                    'Create a config.json or use environment variables as described in the CONFIGURATION.md');
-                process.exit(1);
-            }
 
-            this.#data = await readJSON('./config.json');
-            this.#data.googleCloud ??= {
+        this.#data = {
+            authToken,
+            database,
+            googleApiKey: await this.#get('googleApiKey'),
+            googleCloud: {
+                credentials: googleCloudCredentials,
                 vision: {
-                    enabled: false
+                    enabled: await this.#get(['googleCloud', 'vision', 'enabled'], false, this.#parseBooleanFromEnv)
                 },
                 logging: {
-                    enabled: false,
-                    projectId: '',
-                    logName: '',
+                    enabled: await this.#get(['googleCloud', 'logging', 'enabled'], false, this.#parseBooleanFromEnv),
+                    projectId: await this.#get(['googleCloud', 'logging', 'projectId']),
+                    logName: await this.#get(['googleCloud', 'logging', 'logName']),
                 },
-                credentials: {
-                    client_email: '',
-                    private_key: '',
-                },
-            };
-            this.#data.emoji ??= {};
-            this.#data.featureWhitelist ??= [];
-        }
+            },
+            featureWhitelist: await this.#get('featureWhitelist', [], (i) => i.split(/\s*,\s*/)),
+            emoji: {
+                source: await this.#get(['emoji', 'source']),
+                privacy: await this.#get(['emoji', 'privacy']),
+                invite: await this.#get(['emoji', 'invite']),
+                discord: await this.#get(['emoji', 'discord']),
+                youtube: await this.#get(['emoji', 'youtube']),
+                zendesk: await this.#get(['emoji', 'zendesk']),
+                firstPage: await this.#get(['emoji', 'firstPage']),
+                previousPage: await this.#get(['emoji', 'previousPage']),
+                refresh: await this.#get(['emoji', 'refresh']),
+                nextPage: await this.#get(['emoji', 'nextPage']),
+                lastPage: await this.#get(['emoji', 'lastPage']),
+                announcement: await this.#get(['emoji', 'announcement']),
+                channel: await this.#get(['emoji', 'channel']),
+                forum: await this.#get(['emoji', 'forum']),
+                stage: await this.#get(['emoji', 'stage']),
+                thread: await this.#get(['emoji', 'thread']),
+                voice: await this.#get(['emoji', 'voice']),
+                avatar: await this.#get(['emoji', 'avatar']),
+                ban: await this.#get(['emoji', 'ban']),
+                moderations: await this.#get(['emoji', 'moderations']),
+                mute: await this.#get(['emoji', 'mute']),
+                pardon: await this.#get(['emoji', 'pardon']),
+                strike: await this.#get(['emoji', 'strike']),
+                kick: await this.#get(['emoji', 'kick']),
+                userCreated: await this.#get(['emoji', 'userCreated']),
+                userId: await this.#get(['emoji', 'userId']),
+                userJoined: await this.#get(['emoji', 'userJoined']),
+            }
+        };
     }
 
     /**
-     * parse an environment variable as a boolean
+     * Get a config value from env or config.json
+     * @template T
+     * @param {string[]|string} keyParts config key parts
+     * @param {T} defaultValue default value if key does not exist in the config
+     * @param {(env: string) => T} parseEnv function to parse an environment value to the correct type
+     * @returns {Promise<T>} the config value
+     */
+    async #get(keyParts, defaultValue = null, parseEnv = (i) => i) {
+        if (typeof keyParts === 'string') {
+            keyParts = [keyParts];
+        }
+
+        if (process.env.MODBOT_USE_ENV) {
+            let value = process.env[this.#getEnvKey(keyParts)];
+            if (value === undefined) {
+                return defaultValue;
+            }
+            return parseEnv(value);
+        }
+
+        let config = await this.#getConfigFile();
+        for (let part of keyParts) {
+            if (typeof config !== 'object') {
+                await logger.error('Invalid config file: ' + keyParts.join('.') + ' is not an object');
+                process.exit(1);
+            }
+
+            config = config[part];
+            if (config === undefined || config === null) {
+                return defaultValue;
+            }
+        }
+        return config;
+    }
+
+    /**
+     * Read and parse the config file if it wasn't read yet.
+     * @returns {Promise<object>} config
+     */
+    async #getConfigFile() {
+        if (this.#configFile) {
+            return this.#configFile;
+        }
+
+        if (!await exists('./config.json')) {
+            await logger.error('No settings file found.\n' +
+                'Create a config.json or use environment variables as described in the CONFIGURATION.md');
+            process.exit(1);
+        }
+
+        return this.#configFile ??= await readJSON('./config.json');
+    }
+
+    /**
+     * Convert config key parts to an environment variable key, e.g. ['googleCloud', 'credentials', 'client_email'] -> 'MODBOT_GOOGLE_CLOUD_CREDENTIALS_CLIENT_EMAIL'
+     * @param {string[]} keyParts
+     * @returns {string}
+     */
+    #getEnvKey(keyParts) {
+        let envKeyParts = ["MODBOT"];
+
+        for (let keyPart of keyParts) {
+            let key = "";
+            for (let letter of keyPart) {
+                if (letter.charCodeAt(0) >= 65 && letter.charCodeAt(0) <= 90 && key) {
+                    envKeyParts.push(key);
+                    key = "";
+                }
+
+                key += letter;
+            }
+            if (key) {
+                envKeyParts.push(key);
+            }
+        }
+
+        return envKeyParts.join('_').toUpperCase();
+    }
+
+    /**
+     * Parse an environment variable as a boolean
      * @param {string} string
      * @returns {boolean}
      */
     #parseBooleanFromEnv(string) {
         return ['1', 'true', 'y'].includes(string?.toLowerCase?.());
+    }
+
+    /**
+     * Parse an environment variable as a base64 encoded json string
+     * @template T
+     * @param {string} string
+     * @returns {T}
+     */
+    #parseBase64Json(string) {
+        return JSON.parse((Buffer.from(string, 'base64')).toString());
     }
 }
 
