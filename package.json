@@ -30,7 +30,7 @@
     "discord-api-types": "^0.38.45",
     "discord.js": "^14.26.2",
     "fuse.js": "^7.0.0",
-    "got": "^14.4.2",
+    "got": "^15.0.1",
     "mysql2": "^3.9.8",
     "string-similarity": "^4.0.4",
     "turndown": "^7.1.2"
