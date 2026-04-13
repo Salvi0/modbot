@@ -1,209 +1,135 @@
 import SubCommand from '../../SubCommand.js';
-import {
-    ActionRowBuilder,
-    ChannelSelectMenuBuilder,
-    ChannelType,
-    MessageFlags,
-    ModalBuilder,
-    TextInputBuilder,
-    TextInputStyle
-} from 'discord.js';
 import Confirmation from '../../../database/Confirmation.js';
-import {timeAfter} from '../../../util/timeutils.js';
 import AutoResponse from '../../../database/AutoResponse.js';
 import ErrorEmbed from '../../../formatting/embeds/ErrorEmbed.js';
 import colors from '../../../util/colors.js';
-import {SELECT_MENU_OPTIONS_LIMIT} from '../../../util/apiLimits.js';
-import config from '../../../bot/Config.js';
+import BetterModalBuilder from "../../../formatting/components/BetterModalBuilder.js";
+import TriggerTypeSelect from "../../../formatting/components/ctf/component/TriggerTypeSelect.js";
+import CTFCheckboxes from "../../../formatting/components/ctf/component/CTFCheckboxes.js";
+import NextStepMessage from "../../../formatting/messages/NextStepMessage.js";
+import {timeAfter} from "../../../util/timeutils.js";
+import TriggerInput from "../../../formatting/components/ctf/component/TriggerInput.js";
+import ResponseInput from "../../../formatting/components/ctf/component/ResponseInput.js";
+import ChannelsInput from "../../../formatting/components/ctf/component/ChannelsInput.js";
+
+/**
+ * @typedef {object} AutoResponseConfirmationData
+ * @property {string} triggerType
+ * @property {boolean} global
+ * @property {boolean} imageDetection
+ */
 
 export default class AddAutoResponseCommand extends SubCommand {
+    async execute(interaction) {
+        const modal = new BetterModalBuilder()
+            .setTitle("Add auto-response")
+            .setCustomId(`auto-response:add`)
+            .addLabelComponent(new TriggerTypeSelect())
+            .addLabelComponent(new CTFCheckboxes("auto-response"));
 
-    buildOptions(builder) {
-        builder.addStringOption(option => option
-            .setName('type')
-            .setChoices(
-                {
-                    name: 'Regular expression',
-                    value: 'regex'
-                }, {
-                    name: 'Include (ignore case) [default]',
-                    value: 'include'
-                }, {
-                    name: 'Match full message (ignore case)',
-                    value: 'match'
-                }, {
-                    name: 'Phishing domains (e.g. "discord.com(gg):0.8")',
-                    value: 'phishing'
-                }
-            )
-            .setDescription('How is this auto-response triggered?')
-        );
-        builder.addBooleanOption(option => option
-            .setName('global')
-            .setDescription('Use auto-response in all channels')
-            .setRequired(false));
-
-        if (config.data.googleCloud.vision.enabled) {
-            builder.addBooleanOption(option => option
-                .setName('image-detection')
-                .setDescription('Respond to images containing text that matches the trigger')
-                .setRequired(false));
-        }
-
-        return super.buildOptions(builder);
+        await interaction.showModal(modal);
     }
 
-    async execute(interaction) {
-        const global = interaction.options.getBoolean('global') ?? false,
-            type = interaction.options.getString('type') ?? 'include',
-            vision = interaction.options.getBoolean('image-detection') ?? false;
+    async executeButton(interaction) {
+        const confirmation = await this.getConfirmation(interaction);
+        if (!confirmation) {
+            return;
+        }
 
-        const confirmation = new Confirmation({global, type, vision}, timeAfter('1 hour'));
-        await interaction.showModal(new ModalBuilder()
-            .setTitle(`Create new Auto-response of type ${type}`)
-            .setCustomId(`auto-response:add:${await confirmation.save()}`)
-            .addComponents(
-                // eslint-disable-next-line jsdoc/reject-any-type
-                /** @type {*} */
-                new ActionRowBuilder()
-                    .addComponents(
-                        // eslint-disable-next-line jsdoc/reject-any-type
-                        /** @type {*} */
-                        new TextInputBuilder()
-                            .setRequired(true)
-                            .setCustomId('trigger')
-                            .setStyle(TextInputStyle.Short)
-                            .setPlaceholder(AutoResponse.getTriggerPlaceholder(type))
-                            .setLabel('Trigger')
-                            .setMinLength(1)
-                            .setMaxLength(4000),
-                    ),
-                // eslint-disable-next-line jsdoc/reject-any-type
-                /** @type {*} */
-                new ActionRowBuilder()
-                    .addComponents(
-                        // eslint-disable-next-line jsdoc/reject-any-type
-                        /** @type {*} */
-                        new TextInputBuilder()
-                            .setRequired(true)
-                            .setCustomId('response')
-                            .setStyle(TextInputStyle.Paragraph)
-                            .setPlaceholder('Hi there :wave:')
-                            .setLabel('Response')
-                            .setMinLength(1)
-                            .setMaxLength(4000)
-                    )
-            ));
+        const modal = new BetterModalBuilder()
+            .setTitle("Add auto-response")
+            .setCustomId(interaction.customId)
+            .addLabelComponent(new TriggerInput())
+            .addLabelComponent(new ResponseInput(true));
+
+        if (!confirmation.data.global) {
+            modal.addLabelComponent(new ChannelsInput("auto-response"));
+        }
+
+        return await interaction.showModal(modal);
     }
 
     async executeModal(interaction) {
-        const confirmationId = interaction.customId.split(':')[2];
-        const confirmation = await Confirmation.get(confirmationId);
+        if (interaction.customId === "auto-response:add") {
+            return this.handleFirstStageModal(interaction);
+        }
 
+        const confirmation = await this.getConfirmation(interaction);
         if (!confirmation) {
-            await interaction.reply(ErrorEmbed.message('This confirmation has expired.'));
             return;
         }
 
-        let trigger, response;
-        for (let component of interaction.components) {
-            component = component.components[0];
-            if (component.customId === 'trigger') {
-                trigger = component.value;
-            }
-            else if (component.customId === 'response') {
-                response = component.value;
-            }
-        }
-
-        if (confirmation.data.global) {
-            await confirmation.delete();
-            await this.create(
-                interaction,
-                confirmation.data.global,
-                [],
-                confirmation.data.type,
-                trigger,
-                response,
-                confirmation.data.vision,
-            );
-        }
-        else {
-            confirmation.data.trigger = trigger;
-            confirmation.data.response = response;
-            confirmation.expires = timeAfter('30 min');
-
-            await interaction.reply({
-                flags: MessageFlags.Ephemeral,
-                content: 'Select channels for the auto-response',
-                components: [
-                    /** @type {ActionRowBuilder} */
-                    // eslint-disable-next-line jsdoc/reject-any-type
-                    new ActionRowBuilder().addComponents(/** @type {*} */new ChannelSelectMenuBuilder()
-                        // eslint-disable-next-line jsdoc/reject-any-type
-                        .addChannelTypes(/** @type {*} */[
-                            ChannelType.GuildText,
-                            ChannelType.GuildForum,
-                            ChannelType.GuildAnnouncement,
-                            ChannelType.GuildStageVoice,
-                        ])
-                        .setMinValues(1)
-                        .setMaxValues(SELECT_MENU_OPTIONS_LIMIT)
-                        .setCustomId(`auto-response:add:${await confirmation.save()}`)
-                    ),
-                ]
-            });
-        }
-    }
-
-    async executeSelectMenu(interaction) {
-        const confirmationId = interaction.customId.split(':')[2];
-        const confirmation = await Confirmation.get(confirmationId);
-
-        if (!confirmation) {
-            await interaction.update(ErrorEmbed.message('This confirmation has expired.'));
-            return;
-        }
-
-        await this.create(
-            interaction,
-            confirmation.data.global,
-            interaction.values,
-            confirmation.data.type,
-            confirmation.data.trigger,
-            confirmation.data.response,
-            confirmation.data.vision,
-        );
+        return this.handleSecondStageModal(interaction, confirmation);
     }
 
     /**
-     * create the auto response
-     * @param {import('discord.js').Interaction} interaction
-     * @param {boolean} global
-     * @param {import('discord.js').Snowflake[]} channels
-     * @param {string} type
-     * @param {string} trigger
-     * @param {string} response
-     * @param {?boolean} enableVision
-     * @returns {Promise<void>}
+     * handle data submitted from a modal
+     * @param {import('discord.js').ModalSubmitInteraction} interaction
+     * @returns {Promise<unknown>}
      */
-    async create(
-        interaction,
-        global,
-        channels,
-        type,
-        trigger,
-        response,
-        enableVision,
-    ) {
+    async handleFirstStageModal(interaction) {
+        /** @type {AutoResponseConfirmationData} */
+        const confirmationData = {};
+        confirmationData.imageDetection = false;
+        for (let label of interaction.components) {
+            switch (label.component.customId) {
+                case 'trigger-type':
+                    confirmationData.triggerType = (/** @type {import('discord.js').SelectMenuModalData} */ label.component).values[0];
+                    break;
+                case CTFCheckboxes.GLOBAL_ID:
+                    confirmationData.global = (/** @type {import('discord.js').CheckboxModalData} */ label.component).value;
+                    break;
+                case CTFCheckboxes.OPTIONS_ID: {
+                    const group = /** @type {import('discord.js').CheckboxGroupModalData} */ label.component;
+                    confirmationData.global = group.values.includes(CTFCheckboxes.GLOBAL_ID);
+                    confirmationData.imageDetection = group.values.includes(CTFCheckboxes.IMAGE_DETECTION_ID);
+                }
+            }
+        }
+
+        const confirmation = new Confirmation(confirmationData, timeAfter("1 hour"));
+        const id = "auto-response:add:" + await confirmation.save();
+        await interaction.reply(new NextStepMessage(1, 2, id));
+    }
+
+    /**
+     * handle data submitted from a modal
+     * @param {import('discord.js').ModalSubmitInteraction} interaction
+     * @param {Confirmation<AutoResponseConfirmationData>} confirmation
+     * @returns {Promise<unknown>}
+     */
+    async handleSecondStageModal(interaction, confirmation) {
+        let trigger,
+            response,
+            channels = [];
+        for (let label of interaction.components) {
+            switch (label.component.customId) {
+                case 'trigger':
+                    trigger = (/** @type {import('discord.js').TextInputModalData} */ label.component).value;
+                    break;
+                case 'response':
+                    response = (/** @type {import('discord.js').TextInputModalData} */ label.component).value;
+                    break;
+                case 'channels':
+                    channels = (/** @type {import('discord.js').SelectMenuModalData} */ label.component).values;
+                    break;
+            }
+        }
+
+        await confirmation.delete();
+        if (!trigger || !response ||
+            (!confirmation.data.global && !channels.length)) {
+            await interaction.reply(ErrorEmbed.message("Failed to parse modal data!"));
+        }
+
         const result = await AutoResponse.new(
             interaction.guild.id,
-            global,
+            confirmation.data.global,
             channels,
-            type,
+            confirmation.data.triggerType,
             trigger,
             response,
-            enableVision,
+            confirmation.data.imageDetection,
         );
         if (!result.success) {
             await interaction.reply(ErrorEmbed.message(result.message));
@@ -214,6 +140,22 @@ export default class AddAutoResponseCommand extends SubCommand {
             .embed('Added new auto-response', colors.GREEN)
             .toMessage()
         );
+    }
+
+    /**
+     * Get a confirmation from the interactions custom id
+     * @param {import('discord.js').ModalSubmitInteraction|import('discord.js').ButtonInteraction} interaction
+     * @returns {Promise<?Confirmation<AutoResponseConfirmationData>>}
+     */
+    async getConfirmation(interaction) {
+        const confirmationId = interaction.customId.split(':')[2];
+        const confirmation = await Confirmation.get(confirmationId);
+
+        if (!confirmation) {
+            await interaction.reply(ErrorEmbed.message('This confirmation has expired.'));
+            return null;
+        }
+        return confirmation;
     }
 
     getDescription() {

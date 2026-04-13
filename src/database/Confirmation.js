@@ -6,9 +6,11 @@ import database from './Database.js';
 export default class Confirmation {
 
     /**
+     * @template T
      * @param {T} data
      * @param {number} expires
      * @param {?number} id
+     * @returns {Confirmation<T>}
      */
     constructor(data, expires, id = null) {
         this.data = data;
