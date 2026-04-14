@@ -1,5 +1,5 @@
 import {LabelBuilder} from "discord.js";
-import BetterStringSelectMenuBuilder from "../../BetterStringSelectMenuBuilder.js";
+import BetterStringSelectMenuBuilder from "./BetterStringSelectMenuBuilder.js";
 
 export default class TriggerTypeSelect extends LabelBuilder {
     constructor() {

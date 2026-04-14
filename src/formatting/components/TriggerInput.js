@@ -1,5 +1,5 @@
 import {LabelBuilder, TextInputBuilder, TextInputStyle} from "discord.js";
-import AutoResponse from "../../../../database/AutoResponse.js";
+import AutoResponse from "../../database/AutoResponse.js";
 
 export default class TriggerInput extends LabelBuilder {
     constructor(type) {

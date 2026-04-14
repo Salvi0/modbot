@@ -1,291 +1,166 @@
-import {
-    ActionRowBuilder,
-    ChannelSelectMenuBuilder,
-    ChannelType,
-    ModalBuilder,
-    MessageFlags,
-    TextInputBuilder,
-    TextInputStyle
-} from 'discord.js';
 import Confirmation from '../../../database/Confirmation.js';
 import {parseTime, timeAfter} from '../../../util/timeutils.js';
 import ErrorEmbed from '../../../formatting/embeds/ErrorEmbed.js';
 import colors from '../../../util/colors.js';
-import AddAutoResponseCommand from '../auto-response/AddAutoResponseCommand.js';
 import BadWord from '../../../database/BadWord.js';
-import {SELECT_MENU_OPTIONS_LIMIT} from '../../../util/apiLimits.js';
+import BetterModalBuilder from "../../../formatting/components/BetterModalBuilder.js";
+import TriggerTypeSelect from "../../../formatting/components/TriggerTypeSelect.js";
+import CTFCheckboxes from "../../../formatting/components/CTFCheckboxes.js";
+import PunishmentSelect from "../../../formatting/components/PunishmentSelect.js";
+import PriorityInput from "../../../formatting/components/PriorityInput.js";
+import SubCommand from "../../SubCommand.js";
+import TriggerInput from "../../../formatting/components/TriggerInput.js";
+import ResponseInput from "../../../formatting/components/ResponseInput.js";
+import ChannelsSelect from "../../../formatting/components/ChannelsSelect.js";
+import DirectMessageInput from "../../../formatting/components/DirectMessageInput.js";
+import PunishmentDurationInput from "../../../formatting/components/PunishmentDurationInput.js";
+import NextStepMessage from "../../../formatting/messages/NextStepMessage.js";
 
-export default class AddBadWordCommand extends AddAutoResponseCommand {
+/**
+ * @typedef {object} BadWordConfirmationData
+ * @property {string} triggerType
+ * @property {boolean} global
+ * @property {boolean} imageDetection
+ * @property {string} punishment
+ * @property {number} priority
+ */
 
-    buildOptions(builder) {
-        super.buildOptions(builder);
-        builder.addStringOption(option => option
-            .setName('punishment')
-            .setDescription('Punishment Type')
-            // eslint-disable-next-line jsdoc/reject-any-type
-            .setChoices(/** @type {*} */[
-                {
-                    name: 'None [default]',
-                    value: 'none'
-                }, {
-                    name: 'Ban user',
-                    value: 'ban'
-                }, {
-                    name: 'Kick user',
-                    value: 'kick'
-                }, {
-                    name: 'Mute user',
-                    value: 'mute'
-                }, {
-                    name: 'Softban user',
-                    value: 'softban'
-                }, {
-                    name: 'Strike user',
-                    value: 'strike'
-                }
-            ])
-        );
-        return builder;
-    }
-
+export default class AddBadWordCommand extends SubCommand {
     async execute(interaction) {
-        const global = interaction.options.getBoolean('global') ?? false,
-            type = interaction.options.getString('type') ?? 'include',
-            punishment = interaction.options.getString('punishment') ?? 'none',
-            vision = interaction.options.getBoolean('image-detection') ?? false;
-
-        const confirmation = new Confirmation({global, punishment, type, vision}, timeAfter('1 hour'));
-        const modal = new ModalBuilder()
-            .setTitle(`Create new Bad-word of type ${type}`)
-            .setCustomId(`bad-word:add:${await confirmation.save()}`)
-            .addComponents(
-                // eslint-disable-next-line jsdoc/reject-any-type
-                /** @type {*} */
-                new ActionRowBuilder()
-                    .addComponents(
-                        // eslint-disable-next-line jsdoc/reject-any-type
-                        /** @type {*} */
-                        new TextInputBuilder()
-                            .setRequired(true)
-                            .setCustomId('trigger')
-                            .setStyle(TextInputStyle.Short)
-                            .setPlaceholder(BadWord.getTriggerPlaceholder(type))
-                            .setLabel('Trigger')
-                            .setMinLength(1)
-                            .setMaxLength(4000),
-                    ),
-                // eslint-disable-next-line jsdoc/reject-any-type
-                /** @type {*} */
-                new ActionRowBuilder()
-                    .addComponents(
-                        // eslint-disable-next-line jsdoc/reject-any-type
-                        /** @type {*} */
-                        new TextInputBuilder()
-                            .setRequired(false)
-                            .setCustomId('response')
-                            .setStyle(TextInputStyle.Paragraph)
-                            .setPlaceholder('Hi there :wave:')
-                            .setLabel('Response')
-                            .setMinLength(1)
-                            .setMaxLength(4000)
-                    ),
-                // eslint-disable-next-line jsdoc/reject-any-type
-                /** @type {*} */
-                new ActionRowBuilder()
-                    .addComponents(
-                        // eslint-disable-next-line jsdoc/reject-any-type
-                        /** @type {*} */
-                        new TextInputBuilder()
-                            .setRequired(false)
-                            .setCustomId('priority')
-                            .setStyle(TextInputStyle.Short)
-                            .setPlaceholder('0')
-                            .setLabel('Priority')
-                            .setMinLength(1)
-                            .setMaxLength(10)
-                    ),
-                // eslint-disable-next-line jsdoc/reject-any-type
-                /** @type {*} */
-                new ActionRowBuilder()
-                    .addComponents(
-                        // eslint-disable-next-line jsdoc/reject-any-type
-                        /** @type {*} */
-                        new TextInputBuilder()
-                            .setRequired(false)
-                            .setCustomId('dm')
-                            .setStyle(TextInputStyle.Paragraph)
-                            .setPlaceholder('This is a direct message sent to the user when their message was deleted')
-                            .setLabel('Direct Message')
-                            .setMinLength(1)
-                            .setMaxLength(3000)
-                    ),
-            );
-
-        if (['ban', 'mute'].includes(punishment)) {
-            modal.addComponents(
-                // eslint-disable-next-line jsdoc/reject-any-type
-                /** @type {*} */
-                new ActionRowBuilder()
-                    .addComponents(
-                        // eslint-disable-next-line jsdoc/reject-any-type
-                        /** @type {*} */
-                        new TextInputBuilder()
-                            .setRequired(false)
-                            .setCustomId('duration')
-                            .setStyle(TextInputStyle.Short)
-                            .setPlaceholder('Punishment duration')
-                            .setLabel('duration')
-                            .setMinLength(2)
-                            .setMaxLength(4000)
-                    )
-            );
-        }
+        const modal = new BetterModalBuilder()
+            .setTitle("Add bad-word")
+            .setCustomId("bad-word:add")
+            .addLabelComponent(new TriggerTypeSelect())
+            .addLabelComponent(new CTFCheckboxes("bad-word"))
+            .addLabelComponent(new PunishmentSelect())
+            .addLabelComponent(new PriorityInput());
 
         await interaction.showModal(modal);
     }
 
-    async executeModal(interaction) {
-        const confirmationId = interaction.customId.split(':')[2];
-        const confirmation = await Confirmation.get(confirmationId);
-
+    async executeButton(interaction) {
+        const confirmation = await this.getConfirmation(interaction);
         if (!confirmation) {
-            await interaction.reply(ErrorEmbed.message('This confirmation has expired.'));
             return;
         }
 
-        let trigger, response = null, duration = null, priority = 0, dm = null;
-        for (let component of interaction.components) {
-            component = component.components[0];
-            switch (component.customId) {
-                case 'trigger':
-                    trigger = component.value;
+        const modal = new BetterModalBuilder()
+            .setTitle("Add bad-word")
+            .setCustomId(interaction.customId)
+            .addLabelComponent(new TriggerInput())
+            .addLabelComponent(new ResponseInput(false))
+            .addLabelComponent(new DirectMessageInput());
+
+        if (['ban', 'mute'].includes(confirmation.data.punishment)) {
+            modal.addLabelComponent(new PunishmentDurationInput(confirmation.data.punishment));
+        }
+
+        if (!confirmation.data.global) {
+            modal.addLabelComponent(new ChannelsSelect("bad-word"));
+        }
+
+        return await interaction.showModal(modal);
+    }
+
+    async executeModal(interaction) {
+        if (interaction.customId === "bad-word:add") {
+            return this.handleFirstStageModal(interaction);
+        }
+
+        const confirmation = await this.getConfirmation(interaction);
+        if (!confirmation) {
+            return;
+        }
+
+        return this.handleSecondStageModal(interaction, confirmation);
+    }
+
+    /**
+     * @param {import('discord.js').ModalSubmitInteraction} interaction
+     * @returns {Promise<unknown>}
+     */
+    async handleFirstStageModal(interaction) {
+        /** @type {BadWordConfirmationData} */
+        const confirmationData = {};
+        confirmationData.imageDetection = false;
+        confirmationData.priority = 0;
+        confirmationData.punishment = 'none';
+        for (let label of interaction.components) {
+            switch (label.component.customId) {
+                case 'trigger-type':
+                    confirmationData.triggerType = (/** @type {import('discord.js').SelectMenuModalData} */ label.component).values[0];
                     break;
-                case 'response':
-                    response = component.value?.substring?.(0, 4000);
+                case CTFCheckboxes.GLOBAL_ID:
+                    confirmationData.global = (/** @type {import('discord.js').CheckboxModalData} */ label.component).value;
                     break;
-                case 'duration':
-                    duration = parseTime(component.value) || null;
+                case CTFCheckboxes.OPTIONS_ID: {
+                    const group = /** @type {import('discord.js').CheckboxGroupModalData} */ label.component;
+                    confirmationData.global = group.values.includes(CTFCheckboxes.GLOBAL_ID);
+                    confirmationData.imageDetection = group.values.includes(CTFCheckboxes.IMAGE_DETECTION_ID);
+                    break;
+                }
+                case 'punishment':
+                    confirmationData.punishment = (/** @type {import('discord.js').SelectMenuModalData} */ label.component).values[0];
                     break;
                 case 'priority':
-                    priority = parseInt(component.value) || 0;
-                    break;
-                case 'dm':
-                    dm = component.value?.substring?.(0, 3000);
+                    confirmationData.priority = parseInt((/** @type {import('discord.js').TextInputModalData} */ label.component).value);
                     break;
             }
         }
 
-        if (confirmation.data.global) {
-            await confirmation.delete();
-            await this.create(
-                interaction,
-                confirmation.data.global,
-                [],
-                confirmation.data.type,
-                trigger,
-                response,
-                confirmation.data.punishment,
-                duration,
-                priority,
-                dm,
-                confirmation.data.vision,
-            );
-        } else {
-            confirmation.data.trigger = trigger;
-            confirmation.data.response = response;
-            confirmation.data.duration = duration;
-            confirmation.data.priority = priority;
-            confirmation.data.dm = dm;
-            confirmation.expires = timeAfter('30 min');
-
-            await interaction.reply({
-                flags: MessageFlags.Ephemeral,
-                content: 'Select channels for the bad-word',
-                components: [
-                    /** @type {ActionRowBuilder} */
-                    // eslint-disable-next-line jsdoc/reject-any-type
-                    new ActionRowBuilder().addComponents(/** @type {*} */new ChannelSelectMenuBuilder()
-                        // eslint-disable-next-line jsdoc/reject-any-type
-                        .addChannelTypes(/** @type {*} */[
-                            ChannelType.GuildText,
-                            ChannelType.GuildForum,
-                            ChannelType.GuildAnnouncement,
-                            ChannelType.GuildStageVoice,
-                        ])
-                        .setMinValues(1)
-                        .setMaxValues(SELECT_MENU_OPTIONS_LIMIT)
-                        .setCustomId(`bad-word:add:${await confirmation.save()}`)
-                    ),
-                ]
-            });
-        }
+        const confirmation = new Confirmation(confirmationData, timeAfter("1 hour"));
+        const id = "bad-word:add:" + await confirmation.save();
+        await interaction.reply(new NextStepMessage(1, 2, id));
     }
 
-    async executeSelectMenu(interaction) {
-        const confirmationId = interaction.customId.split(':')[2];
-        const confirmation = await Confirmation.get(confirmationId);
-
-        if (!confirmation) {
-            await interaction.update(ErrorEmbed.message('This confirmation has expired.'));
-            return;
-        }
-
-        await this.create(
-            interaction,
-            confirmation.data.global,
-            interaction.values,
-            confirmation.data.type,
-            confirmation.data.trigger,
-            confirmation.data.response,
-            confirmation.data.punishment,
-            confirmation.data.duration,
-            confirmation.data.priority,
-            confirmation.data.dm,
-            confirmation.data.vision,
-        );
-    }
-
-    // noinspection JSCheckFunctionSignatures
     /**
-     * create the bad word
-     * @param {import('discord.js').Interaction} interaction
-     * @param {boolean} global
-     * @param {import('discord.js').Snowflake[]} channels
-     * @param {string} type
-     * @param {string} trigger
-     * @param {?string} response
-     * @param {?string} punishment
-     * @param {?number} duration
-     * @param {?number} priority
-     * @param {?string} dm
-     * @param {?boolean} enableVision
-     * @returns {Promise<void>}
+     * @param {import('discord.js').ModalSubmitInteraction} interaction
+     * @param {Confirmation<BadWordConfirmationData>} confirmation
+     * @returns {Promise<unknown>}
      */
-    async create(
-        interaction,
-        global,
-        channels,
-        type,
-        trigger,
-        response,
-        punishment,
-        duration,
-        priority,
-        dm,
-        enableVision,
-    ) {
+    async handleSecondStageModal(interaction, confirmation) {
+        let trigger,
+            response = null,
+            directMessage = null,
+            duration = null,
+            channels = [];
+        for (let label of interaction.components) {
+            switch (label.component.customId) {
+                case 'trigger':
+                    trigger = (/** @type {import('discord.js').TextInputModalData} */ label.component).value;
+                    break;
+                case 'response':
+                    response = (/** @type {import('discord.js').TextInputModalData} */ label.component).value;
+                    break;
+                case 'channels':
+                    channels = (/** @type {import('discord.js').SelectMenuModalData} */ label.component).values;
+                    break;
+                case 'dm':
+                    directMessage = (/** @type {import('discord.js').TextInputModalData} */ label.component).value;
+                    break;
+                case 'duration':
+                    duration = parseTime((/** @type {import('discord.js').TextInputModalData} */ label.component).value);
+                    break;
+            }
+        }
+
+        await confirmation.delete();
+        if (!trigger || (!confirmation.data.global && !channels.length)) {
+            return await interaction.reply(ErrorEmbed.message("Failed to parse modal data!"));
+        }
+
         const result = await BadWord.new(
             interaction.guild.id,
-            global,
+            confirmation.data.global,
             channels,
-            type,
+            confirmation.data.triggerType,
             trigger,
             response,
-            punishment,
+            confirmation.data.punishment,
             duration,
-            priority,
-            dm,
-            enableVision,
+            confirmation.data.priority,
+            directMessage,
+            confirmation.data.imageDetection,
         );
         if (!result.success) {
             await interaction.reply(ErrorEmbed.message(result.message));
@@ -293,9 +168,25 @@ export default class AddBadWordCommand extends AddAutoResponseCommand {
         }
 
         await interaction.reply(result.badWord
-            .embed('Added new bad-word', colors.RED)
+            .embed('Added new bad-word', colors.GREEN)
             .toMessage()
         );
+    }
+
+    /**
+     * Get a confirmation from the interactions custom id
+     * @param {import('discord.js').ModalSubmitInteraction|import('discord.js').ButtonInteraction} interaction
+     * @returns {Promise<?Confirmation<BadWordConfirmationData>>}
+     */
+    async getConfirmation(interaction) {
+        const confirmationId = interaction.customId.split(':')[2];
+        const confirmation = await Confirmation.get(confirmationId);
+
+        if (!confirmation) {
+            await interaction.reply(ErrorEmbed.message('This confirmation has expired.'));
+            return null;
+        }
+        return confirmation;
     }
 
     getDescription() {

@@ -1,7 +1,7 @@
 import {ChannelSelectMenuBuilder, ChannelType, LabelBuilder} from "discord.js";
-import {SELECT_MENU_OPTIONS_LIMIT} from "../../../../util/apiLimits.js";
+import {SELECT_MENU_OPTIONS_LIMIT} from "../../util/apiLimits.js";
 
-export default class ChannelsInput extends LabelBuilder {
+export default class ChannelsSelect extends LabelBuilder {
     /**
      * @param {string} name
      */

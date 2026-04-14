@@ -4,13 +4,13 @@ import AutoResponse from '../../../database/AutoResponse.js';
 import ErrorEmbed from '../../../formatting/embeds/ErrorEmbed.js';
 import colors from '../../../util/colors.js';
 import BetterModalBuilder from "../../../formatting/components/BetterModalBuilder.js";
-import TriggerTypeSelect from "../../../formatting/components/ctf/component/TriggerTypeSelect.js";
-import CTFCheckboxes from "../../../formatting/components/ctf/component/CTFCheckboxes.js";
+import TriggerTypeSelect from "../../../formatting/components/TriggerTypeSelect.js";
+import CTFCheckboxes from "../../../formatting/components/CTFCheckboxes.js";
 import NextStepMessage from "../../../formatting/messages/NextStepMessage.js";
 import {timeAfter} from "../../../util/timeutils.js";
-import TriggerInput from "../../../formatting/components/ctf/component/TriggerInput.js";
-import ResponseInput from "../../../formatting/components/ctf/component/ResponseInput.js";
-import ChannelsInput from "../../../formatting/components/ctf/component/ChannelsInput.js";
+import TriggerInput from "../../../formatting/components/TriggerInput.js";
+import ResponseInput from "../../../formatting/components/ResponseInput.js";
+import ChannelsSelect from "../../../formatting/components/ChannelsSelect.js";
 
 /**
  * @typedef {object} AutoResponseConfirmationData
@@ -23,7 +23,7 @@ export default class AddAutoResponseCommand extends SubCommand {
     async execute(interaction) {
         const modal = new BetterModalBuilder()
             .setTitle("Add auto-response")
-            .setCustomId(`auto-response:add`)
+            .setCustomId("auto-response:add")
             .addLabelComponent(new TriggerTypeSelect())
             .addLabelComponent(new CTFCheckboxes("auto-response"));
 
@@ -43,7 +43,7 @@ export default class AddAutoResponseCommand extends SubCommand {
             .addLabelComponent(new ResponseInput(true));
 
         if (!confirmation.data.global) {
-            modal.addLabelComponent(new ChannelsInput("auto-response"));
+            modal.addLabelComponent(new ChannelsSelect("auto-response"));
         }
 
         return await interaction.showModal(modal);
@@ -63,7 +63,6 @@ export default class AddAutoResponseCommand extends SubCommand {
     }
 
     /**
-     * handle data submitted from a modal
      * @param {import('discord.js').ModalSubmitInteraction} interaction
      * @returns {Promise<unknown>}
      */
@@ -83,6 +82,7 @@ export default class AddAutoResponseCommand extends SubCommand {
                     const group = /** @type {import('discord.js').CheckboxGroupModalData} */ label.component;
                     confirmationData.global = group.values.includes(CTFCheckboxes.GLOBAL_ID);
                     confirmationData.imageDetection = group.values.includes(CTFCheckboxes.IMAGE_DETECTION_ID);
+                    break;
                 }
             }
         }
@@ -93,7 +93,6 @@ export default class AddAutoResponseCommand extends SubCommand {
     }
 
     /**
-     * handle data submitted from a modal
      * @param {import('discord.js').ModalSubmitInteraction} interaction
      * @param {Confirmation<AutoResponseConfirmationData>} confirmation
      * @returns {Promise<unknown>}
@@ -119,7 +118,7 @@ export default class AddAutoResponseCommand extends SubCommand {
         await confirmation.delete();
         if (!trigger || !response ||
             (!confirmation.data.global && !channels.length)) {
-            await interaction.reply(ErrorEmbed.message("Failed to parse modal data!"));
+            return await interaction.reply(ErrorEmbed.message("Failed to parse modal data!"));
         }
 
         const result = await AutoResponse.new(

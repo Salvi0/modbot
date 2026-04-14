@@ -1,6 +1,6 @@
 import {CheckboxBuilder, LabelBuilder} from "discord.js";
-import BetterCheckboxGroupBuilder from "../../BetterCheckboxGroupBuilder.js";
-import config from "../../../../bot/Config.js";
+import BetterCheckboxGroupBuilder from "./BetterCheckboxGroupBuilder.js";
+import config from "../../bot/Config.js";
 
 export default class CTFCheckboxes extends LabelBuilder {
     static GLOBAL_ID = "global";
