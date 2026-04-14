@@ -47,7 +47,7 @@ export default class AddBadWordCommand extends SubCommand {
         const modal = new BetterModalBuilder()
             .setTitle("Add bad-word")
             .setCustomId(interaction.customId)
-            .addLabelComponent(new TriggerInput())
+            .addLabelComponent(new TriggerInput(confirmation.data.triggerType))
             .addLabelComponent(new ResponseInput(false))
             .addLabelComponent(new DirectMessageInput());
 

@@ -4,18 +4,6 @@ import {ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags} from 'discor
 import CompletingAutoResponseCommand from './CompletingAutoResponseCommand.js';
 
 export default class ShowAutoReponseCommand extends CompletingAutoResponseCommand {
-
-    buildOptions(builder) {
-        builder.addIntegerOption(option => option
-            .setName('id')
-            .setDescription('The id of the auto-response you want to view')
-            .setMinValue(0)
-            .setRequired(true)
-            .setAutocomplete(true)
-        );
-        return super.buildOptions(builder);
-    }
-
     async execute(interaction) {
         const autoResponse = /** @type {?AutoResponse} */
             await AutoResponse.getByID(interaction.options.getInteger('id', true), interaction.guildId);

@@ -1,66 +1,16 @@
 import CompletingAutoResponseCommand from './CompletingAutoResponseCommand.js';
 import Confirmation from '../../../database/Confirmation.js';
 import {timeAfter} from '../../../util/timeutils.js';
-import {
-    ActionRowBuilder,
-    channelMention,
-    ChannelSelectMenuBuilder,
-    ChannelType,
-    MessageFlags,
-    ModalBuilder,
-    TextInputBuilder,
-    TextInputStyle
-} from 'discord.js';
 import AutoResponse from '../../../database/AutoResponse.js';
 import ErrorEmbed from '../../../formatting/embeds/ErrorEmbed.js';
 import colors from '../../../util/colors.js';
-import {SELECT_MENU_OPTIONS_LIMIT} from '../../../util/apiLimits.js';
-import config from '../../../bot/Config.js';
+import AutoResponseFirstStepModal from "../../../formatting/modals/AutoResponseFirstStepModal.js";
+import NextStepMessage from "../../../formatting/messages/NextStepMessage.js";
+import AutoResponseFistStageModalData from "./AutoResponseFistStageModalData.js";
+import AutoResponseSecondStageModalData from "./AutoResponseSecondStageModalData.js";
+import AutoResponseSecondStepModal from "../../../formatting/modals/AutoResponseSecondStepModal.js";
 
 export default class EditAutoResponseCommand extends CompletingAutoResponseCommand {
-
-    buildOptions(builder) {
-        builder.addIntegerOption(option => option
-            .setName('id')
-            .setDescription('The id of the auto-response you want to delete')
-            .setMinValue(0)
-            .setRequired(true)
-            .setAutocomplete(true)
-        );
-        builder.addStringOption(option => option
-            .setName('type')
-            .setChoices(
-                {
-                    name: 'Regular expression',
-                    value: 'regex'
-                }, {
-                    name: 'Include (ignore case) [default]',
-                    value: 'include'
-                }, {
-                    name: 'Match full message (ignore case)',
-                    value: 'match'
-                }, {
-                    name: 'Phishing domains (e.g. "discord.com(gg):0.8")',
-                    value: 'phishing'
-                }
-            )
-            .setDescription('How is this auto-response triggered?')
-        );
-        builder.addBooleanOption(option => option
-            .setName('global')
-            .setDescription('Use auto-response in all channels')
-            .setRequired(false));
-
-        if (config.data.googleCloud.vision.enabled) {
-            builder.addBooleanOption(option => option
-                .setName('image-detection')
-                .setDescription('Respond to images containing text that matches the trigger')
-                .setRequired(false));
-        }
-
-        return super.buildOptions(builder);
-    }
-
     async execute(interaction) {
         const autoResponse = /** @type {?AutoResponse} */
             await AutoResponse.getByID(interaction.options.getInteger('id', true), interaction.guildId);
@@ -69,214 +19,124 @@ export default class EditAutoResponseCommand extends CompletingAutoResponseComma
             await interaction.reply(ErrorEmbed.message('There is no auto-response with this id.'));
             return;
         }
-
-        const global = interaction.options.getBoolean('global'),
-            type = interaction.options.getString('type'),
-            vision = interaction.options.getBoolean('image-detection');
-        await this.showModal(interaction, autoResponse, global, type, vision);
+        await this.showFirstStageModal(interaction, autoResponse);
     }
 
     async executeButton(interaction) {
         const parts = interaction.customId.split(':');
-        const autoResponse = /** @type {?AutoResponse} */
-            await AutoResponse.getByID(parts[2], interaction.guildId);
-
-        if (!autoResponse) {
-            await interaction.update({
-                embeds: [new ErrorEmbed('There is no auto-response with this id.')],
-                components: []
-            });
+        const response = await this.getAutoResponse(interaction, parts);
+        if (!response) {
             return;
         }
 
-        await this.showModal(interaction, autoResponse, null, null, null);
+        if (parts.length === 3) {
+            return this.showFirstStageModal(interaction, response);
+        }
+
+        const confirmation = await this.getConfirmation(interaction, parts);
+        if (!confirmation) {
+            return;
+        }
+
+        await interaction.showModal(new AutoResponseSecondStepModal(this, confirmation, response));
     }
 
     /**
      *
      * @param {import('discord.js').Interaction} interaction
      * @param {AutoResponse} autoResponse
-     * @param {?boolean} global
-     * @param {?string} type
-     * @param {?boolean} vision
      * @returns {Promise<void>}
      */
-    async showModal(interaction, autoResponse, global, type, vision) {
-        global ??= autoResponse.global;
-        type ??= autoResponse.trigger.type;
-        vision ??= autoResponse.enableVision;
-
-        let trigger = autoResponse.trigger;
-        if (type === 'regex') {
-            trigger = trigger.toRegex();
-        }
-
-        const confirmation = new Confirmation({global, type, id: autoResponse.id, vision}, timeAfter('1 hour'));
-        await interaction.showModal(new ModalBuilder()
-            .setTitle(`Edit Auto-response #${autoResponse.id}`)
-            .setCustomId(`auto-response:edit:${await confirmation.save()}`)
-            .addComponents(
-                // eslint-disable-next-line jsdoc/reject-any-type
-                /** @type {*} */
-                new ActionRowBuilder()
-                    .addComponents(
-                        // eslint-disable-next-line jsdoc/reject-any-type
-                        /** @type {*} */
-                        new TextInputBuilder()
-                            .setRequired(true)
-                            .setCustomId('trigger')
-                            .setStyle(TextInputStyle.Short)
-                            .setPlaceholder(AutoResponse.getTriggerPlaceholder(type))
-                            .setLabel('Trigger')
-                            .setValue(trigger.asContentString()),
-                    ),
-                // eslint-disable-next-line jsdoc/reject-any-type
-                /** @type {*} */
-                new ActionRowBuilder()
-                    .addComponents(
-                        // eslint-disable-next-line jsdoc/reject-any-type
-                        /** @type {*} */
-                        new TextInputBuilder()
-                            .setRequired(true)
-                            .setCustomId('response')
-                            .setStyle(TextInputStyle.Paragraph)
-                            .setPlaceholder('Hi there :wave:')
-                            .setLabel('Response')
-                            .setValue(autoResponse.response)
-                    )
-            ));
+    async showFirstStageModal(interaction, autoResponse) {
+        await interaction.showModal(new AutoResponseFirstStepModal(this, autoResponse));
     }
 
     async executeModal(interaction) {
-        const confirmationId = interaction.customId.split(':')[2];
+        let parts = interaction.customId.split(":");
+        let response = await this.getAutoResponse(interaction, parts);
+        if (!response) {
+            return;
+        }
+
+        if (parts.length === 3) {
+            return this.handleFirstStageModal(interaction, response);
+        }
+
+        const confirmation = await this.getConfirmation(interaction, parts);
+        if (!confirmation) {
+            return;
+        }
+
+        return this.handleSecondStageModal(interaction, response, confirmation);
+    }
+
+    /**
+     * @param {import('discord.js').ModalSubmitInteraction} interaction
+     * @param {AutoResponse} response
+     * @returns {Promise<unknown>}
+     */
+    async handleFirstStageModal(interaction, response) {
+        const confirmation = new Confirmation(AutoResponseFistStageModalData.fromInteraction(interaction), timeAfter("1 hour"));
+        const id = "auto-response:edit:" + response.id + ":" + await confirmation.save();
+        await interaction.reply(new NextStepMessage(1, 2, id));
+    }
+
+    /**
+     * Get a confirmation from the interactions custom id
+     * @param {import('discord.js').ModalSubmitInteraction|import('discord.js').ButtonInteraction} interaction
+     * @param {string[]} parts
+     * @returns {Promise<?Confirmation<import('./AddAutoResponseCommand.js').AutoResponseFistStageModalData>>}
+     */
+    async getConfirmation(interaction, parts) {
+        const confirmationId = parts[3];
         const confirmation = await Confirmation.get(confirmationId);
 
         if (!confirmation) {
             await interaction.reply(ErrorEmbed.message('This confirmation has expired.'));
-            return;
+            return null;
         }
-
-        const autoResponse = /** @type {?AutoResponse} */
-            await AutoResponse.getByID(confirmation.data.id, interaction.guildId);
-
-        if (!autoResponse) {
-            await interaction.reply(ErrorEmbed.message('There is no auto-response with this id.'));
-            return;
-        }
-
-        let trigger, response;
-        for (let component of interaction.components) {
-            component = component.components[0];
-            if (component.customId === 'trigger') {
-                trigger = component.value;
-            }
-            else if (component.customId === 'response') {
-                response = component.value;
-            }
-        }
-
-        if (confirmation.data.global) {
-            await confirmation.delete();
-            await this.update(
-                interaction,
-                confirmation.data.id,
-                confirmation.data.global,
-                [],
-                confirmation.data.type,
-                trigger,
-                response,
-                confirmation.data.vision,
-            );
-        } else {
-            confirmation.data.trigger = trigger;
-            confirmation.data.response = response;
-            confirmation.expires = timeAfter('30 min');
-
-            await interaction.reply({
-                flags: MessageFlags.Ephemeral,
-                content: `Select channels for the auto-response. Currently selected channels: ${
-                    autoResponse.channels.map(c => channelMention(c)).join(', ')}`,
-                components: [
-                    /** @type {ActionRowBuilder} */
-                    // eslint-disable-next-line jsdoc/reject-any-type
-                    new ActionRowBuilder().addComponents(/** @type {*} */new ChannelSelectMenuBuilder()
-                        // eslint-disable-next-line jsdoc/reject-any-type
-                        .addChannelTypes(/** @type {*} */[
-                            ChannelType.GuildText,
-                            ChannelType.GuildForum,
-                            ChannelType.GuildAnnouncement,
-                            ChannelType.GuildStageVoice,
-                        ])
-                        .setMinValues(1)
-                        .setMaxValues(SELECT_MENU_OPTIONS_LIMIT)
-                        .setCustomId(`auto-response:edit:${await confirmation.save()}`)
-                    )
-                ]
-            });
-        }
-    }
-
-    async executeSelectMenu(interaction) {
-        const confirmationId = interaction.customId.split(':')[2];
-        const confirmation = await Confirmation.get(confirmationId);
-
-        if (!confirmation) {
-            await interaction.update(ErrorEmbed.message('This confirmation has expired.'));
-            return;
-        }
-
-        await this.update(
-            interaction,
-            confirmation.data.id,
-            confirmation.data.global,
-            interaction.values,
-            confirmation.data.type,
-            confirmation.data.trigger,
-            confirmation.data.response,
-            confirmation.data.vision,
-        );
+        return confirmation;
     }
 
     /**
-     * create the auto response
-     * @param {import('discord.js').Interaction} interaction
-     * @param {number} id
-     * @param {boolean} global
-     * @param {import('discord.js').Snowflake[]} channels
-     * @param {string} type
-     * @param {string} trigger
-     * @param {string} response
-     * @param {?boolean} vision
-     * @returns {Promise<void>}
+     * Get a confirmation from the interactions custom id
+     * @param {import('discord.js').ModalSubmitInteraction|import('discord.js').ButtonInteraction} interaction
+     * @param {string[]} parts
+     * @returns {Promise<?AutoResponse>}
      */
-    async update(
-        interaction,
-        id,
-        global,
-        channels,
-        type,
-        trigger,
-        response,
-        vision,
-    ) {
-        const autoResponse =
-            /** @type {?AutoResponse} */
-            await AutoResponse.getByID(id, interaction.guildId);
+    async getAutoResponse(interaction, parts) {
+        const confirmationId = parts[2];
+        const response = await AutoResponse.getByID(confirmationId, interaction.guildId);
 
-        if (!autoResponse) {
-            await interaction.reply(ErrorEmbed.message('There is no auto-response with this id.'));
-            return;
+        if (!response) {
+            await interaction.reply(ErrorEmbed.message('Could not find this response.'));
+            return null;
+        }
+        return response;
+    }
+
+    /**
+     * @param {import('discord.js').ModalSubmitInteraction} interaction
+     * @param {AutoResponse} autoResponse
+     * @param {Confirmation<AutoResponseFistStageModalData>} confirmation
+     * @returns {Promise<unknown>}
+     */
+    async handleSecondStageModal(interaction, autoResponse, confirmation) {
+        await confirmation.delete();
+        const data = AutoResponseSecondStageModalData.fromInteraction(interaction);
+        if (!data.trigger || !data.response || (!confirmation.data.global && !data.channels.length)) {
+            return await interaction.reply(ErrorEmbed.message("Failed to parse modal data!"));
         }
 
-        autoResponse.global = global;
-        autoResponse.channels = channels;
-        autoResponse.enableVision = vision;
-        const triggerResponse = AutoResponse.getTrigger(type, trigger);
+        autoResponse.global = confirmation.data.global;
+        autoResponse.channels = data.channels;
+        autoResponse.enableVision = confirmation.data.imageDetection;
+        const triggerResponse = AutoResponse.getTrigger(confirmation.data.triggerType, data.trigger);
         if (!triggerResponse.success) {
             return interaction.reply(ErrorEmbed.message(triggerResponse.message));
         }
         autoResponse.trigger = triggerResponse.trigger;
-        autoResponse.response = response;
+        autoResponse.response = data.response;
         await autoResponse.save();
 
         await interaction.reply(autoResponse

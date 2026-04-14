@@ -14,32 +14,36 @@ export default class CTFCheckboxes extends LabelBuilder {
     static OPTIONS_ID = "options";
 
     /**
-     * @param {string} type
+     * @param {import('../../commands/SubCommand.js').default} command
+     * @param {?import('../../database/AutoResponse.js').default} existing
      */
-    constructor(type) {
+    constructor(command, existing = null) {
         super();
 
         if (config.data.googleCloud.vision.enabled) {
             this.setLabel('Options')
-                .setDescription('Options for the ' + type)
+                .setDescription('Options for the ' + command.getTopLevelParent().getName())
                 .setCheckboxGroupComponent(new BetterCheckboxGroupBuilder()
                     .setCustomId(CTFCheckboxes.OPTIONS_ID)
+                    .setRequired(false)
                     .addOption({
                         value: CTFCheckboxes.GLOBAL_ID,
                         label: CTFCheckboxes.GLOBAL_TITLE,
                         description: CTFCheckboxes.GLOBAL_DESCRIPTION,
+                        default: existing?.global ?? false,
                     })
                     .addOption({
                         value: CTFCheckboxes.IMAGE_DETECTION_ID,
                         label: CTFCheckboxes.IMAGE_DETECTION_TITLE,
                         description: CTFCheckboxes.IMAGE_DETECTION_DESCRIPTION,
+                        default: existing?.enableVision ?? false,
                     }));
         } else {
-
             this.setLabel(CTFCheckboxes.GLOBAL_TITLE)
                 .setDescription(CTFCheckboxes.GLOBAL_DESCRIPTION)
                 .setCheckboxComponent(new CheckboxBuilder()
                     .setCustomId(CTFCheckboxes.GLOBAL_ID)
+                    .setDefault(existing?.global ?? false)
                 );
         }
     }

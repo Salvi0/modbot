@@ -273,7 +273,8 @@ export default class ChatTriggeredFeature {
     static fromData(data) {
         data.trigger = JSON.parse(data.trigger);
         data.global = data.global === 1;
-        data.channels = data.channels.split(',');
+        data.enableVision = data.enableVision === 1;
+        data.channels = data.channels.split(',').filter(s => s);
         return new this(data.guildid, data, data.id);
     }
 

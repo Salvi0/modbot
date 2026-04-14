@@ -4,6 +4,20 @@ import database from './Database.js';
  * @template T
  */
 export default class Confirmation {
+    /**
+     * @type {T}
+     */
+    data;
+
+    /**
+     * @type {number}
+     */
+    expires;
+
+    /**
+     * @type {?number}
+     */
+    id;
 
     /**
      * @template T

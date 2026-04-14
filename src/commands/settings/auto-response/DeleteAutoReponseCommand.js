@@ -4,18 +4,6 @@ import ErrorEmbed from '../../../formatting/embeds/ErrorEmbed.js';
 import colors from '../../../util/colors.js';
 
 export default class DeleteAutoReponseCommand extends CompletingAutoResponseCommand {
-
-    buildOptions(builder) {
-        builder.addIntegerOption(option => option
-            .setName('id')
-            .setDescription('The id of the auto-response you want to delete')
-            .setMinValue(0)
-            .setRequired(true)
-            .setAutocomplete(true)
-        );
-        return super.buildOptions(builder);
-    }
-
     async execute(interaction) {
         const autoResponse = /** @type {?AutoResponse} */
             await AutoResponse.getByID(interaction.options.getInteger('id', true), interaction.guildId);

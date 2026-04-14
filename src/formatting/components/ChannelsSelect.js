@@ -1,18 +1,19 @@
-import {ChannelSelectMenuBuilder, ChannelType, LabelBuilder} from "discord.js";
+import {ChannelType, LabelBuilder} from "discord.js";
 import {SELECT_MENU_OPTIONS_LIMIT} from "../../util/apiLimits.js";
+import BetterChannelSelectMenuBuilder from "./BetterChannelSelectMenuBuilder.js";
 
 export default class ChannelsSelect extends LabelBuilder {
     /**
-     * @param {string} name
+     * @param {import('../../commands/SubCommand.js').default} command
+     * @param {?import('../../database/AutoResponse.js').default} existing
      */
-    constructor(name) {
+    constructor(command, existing = null) {
         super();
         this.setLabel("Channels")
-            .setDescription("The channels this " + name + " applies to")
+            .setDescription("The channels this " + command.getTopLevelParent().getName() + " applies to")
             .setChannelSelectMenuComponent(
-                new ChannelSelectMenuBuilder()
-                    // eslint-disable-next-line jsdoc/reject-any-type
-                    .addChannelTypes(/** @type {*} */[
+                new BetterChannelSelectMenuBuilder()
+                    .addChannelTypes([
                         ChannelType.GuildText,
                         ChannelType.GuildForum,
                         ChannelType.GuildAnnouncement,
@@ -21,6 +22,7 @@ export default class ChannelsSelect extends LabelBuilder {
                     .setMinValues(1)
                     .setMaxValues(SELECT_MENU_OPTIONS_LIMIT)
                     .setCustomId(`channels`)
+                    .setDefaultChannels(existing?.channels ?? [])
             );
     }
 }

@@ -6,6 +6,17 @@ import {AUTOCOMPLETE_NAME_LIMIT} from '../../../util/apiLimits.js';
  * @abstract
  */
 export default class CompletingAutoResponseCommand extends SubCommand {
+    buildOptions(builder) {
+        builder.addIntegerOption(option => option
+            .setName('id')
+            .setDescription('The id of the auto-response you want to ' + this.getName())
+            .setMinValue(0)
+            .setRequired(true)
+            .setAutocomplete(true)
+        );
+        return super.buildOptions(builder);
+    }
+
     async complete(interaction) {
         const focussed = interaction.options.getFocused(true);
         switch (focussed.name) {
