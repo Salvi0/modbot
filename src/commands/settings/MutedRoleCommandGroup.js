@@ -7,9 +7,9 @@ export default class MutedRoleCommandGroup extends SubCommandGroup {
 
     getChildren() {
         return [
-            new CreateMutedRoleCommand(),
-            new SetMutedRoleCommand(),
-            new DisableMutedRoleCommand(),
+            new CreateMutedRoleCommand(this),
+            new SetMutedRoleCommand(this),
+            new DisableMutedRoleCommand(this),
         ];
     }
 

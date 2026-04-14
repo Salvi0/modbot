@@ -15,11 +15,11 @@ export default class BadWordCommand extends ParentCommand {
 
     getChildren() {
         return [
-            new ListBadWordCommand(),
-            new AddBadWordCommand(),
-            new ShowBadWordCommand(),
-            new DeleteBadWordCommand(),
-            new EditBadWordCommand(),
+            new ListBadWordCommand(this),
+            new AddBadWordCommand(this),
+            new ShowBadWordCommand(this),
+            new DeleteBadWordCommand(this),
+            new EditBadWordCommand(this),
         ];
     }
 

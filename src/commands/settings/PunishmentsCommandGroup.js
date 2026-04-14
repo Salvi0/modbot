@@ -6,8 +6,8 @@ export default class PunishmentsCommandGroup extends SubCommandGroup {
 
     getChildren() {
         return [
-            new ShowPunishmentsCommand(),
-            new SetPunishmentsCommand(),
+            new ShowPunishmentsCommand(this),
+            new SetPunishmentsCommand(this),
         ];
     }
 

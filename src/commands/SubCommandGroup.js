@@ -6,6 +6,18 @@ import commandManager from './CommandManager.js';
  */
 
 export default class SubCommandGroup extends ExecutableCommand {
+    /**
+     * @type {import('./Command.js').default}
+     */
+    parent;
+
+    /**
+     * @param {import('./Command.js').default} parent
+     */
+    constructor(parent) {
+        super();
+        this.parent = parent;
+    }
 
     /**
      * @abstract

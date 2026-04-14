@@ -5,7 +5,6 @@ import LogChannelCommand from './LogChannelCommand.js';
 import MessageLogCommand from './MessageLogCommand.js';
 import JoinLogCommand from './JoinLogCommand.js';
 import SpamCommand from './SpamCommand.js';
-import AutoResponseCommand from './AutoResponseCommand.js';
 import CapsCommand from './CapsCommand.js';
 import HelpCenterCommand from './HelpCenterCommand.js';
 import PlaylistCommand from './PlaylistCommand.js';
@@ -15,7 +14,6 @@ import ProtectedRolesCommandGroup from './ProtectedRolesCommandGroup.js';
 import MutedRoleCommandGroup from './MutedRoleCommandGroup.js';
 import LinkCoolDownCommand from './LinkCoolDownCommand.js';
 import InvitesCommandGroup from './InvitesCommandGroup.js';
-import BadWordCommand from './BadWordCommand.js';
 import AttachmentCoolDownCommand from './AttachmentCoolDownCommand.js';
 
 export default class SettingsCommand extends ParentCommand {
@@ -27,30 +25,28 @@ export default class SettingsCommand extends ParentCommand {
 
     getChildren() {
         return [
-            new SettingsOverviewCommand(),
+            new SettingsOverviewCommand(this),
 
             // Logging
-            new LogChannelCommand(),
-            new MessageLogCommand(),
-            new JoinLogCommand(),
+            new LogChannelCommand(this),
+            new MessageLogCommand(this),
+            new JoinLogCommand(this),
 
-            new PunishmentsCommandGroup(),
-            new ProtectedRolesCommandGroup(),
-            new MutedRoleCommandGroup(),
-            new AutoResponseCommand(),
-            new BadWordCommand(),
+            new PunishmentsCommandGroup(this),
+            new ProtectedRolesCommandGroup(this),
+            new MutedRoleCommandGroup(this),
 
             // Auto Moderation
-            new SpamCommand(),
-            new CapsCommand(),
-            new SimilarMessagesCommand(),
-            new LinkCoolDownCommand(),
-            new AttachmentCoolDownCommand(),
-            new InvitesCommandGroup(),
+            new SpamCommand(this),
+            new CapsCommand(this),
+            new SimilarMessagesCommand(this),
+            new LinkCoolDownCommand(this),
+            new AttachmentCoolDownCommand(this),
+            new InvitesCommandGroup(this),
 
             // External
-            new HelpCenterCommand(),
-            new PlaylistCommand(),
+            new HelpCenterCommand(this),
+            new PlaylistCommand(this),
         ];
     }
 

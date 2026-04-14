@@ -6,8 +6,8 @@ export default class InvitesCommandGroup extends SubCommandGroup {
 
     getChildren() {
         return [
-            new ShowInvitesCommand(),
-            new SetInvitesCommand(),
+            new ShowInvitesCommand(this),
+            new SetInvitesCommand(this),
         ];
     }
 

@@ -15,11 +15,11 @@ export default class AutoResponseCommand extends ParentCommand {
 
     getChildren() {
         return [
-            new ListAutoResponseCommand(),
-            new AddAutoResponseCommand(),
-            new ShowAutoReponseCommand(),
-            new DeleteAutoReponseCommand(),
-            new EditAutoResponseCommand(),
+            new ListAutoResponseCommand(this),
+            new AddAutoResponseCommand(this),
+            new ShowAutoReponseCommand(this),
+            new DeleteAutoReponseCommand(this),
+            new EditAutoResponseCommand(this),
         ];
     }
 

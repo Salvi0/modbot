@@ -7,9 +7,9 @@ export default class ProtectedRolesCommandGroup extends SubCommandGroup {
 
     getChildren() {
         return [
-            new AddProtectedRoleCommand(),
-            new RemoveProtectedRoleCommand(),
-            new ListProtectedRolesCommand(),
+            new AddProtectedRoleCommand(this),
+            new RemoveProtectedRoleCommand(this),
+            new ListProtectedRolesCommand(this),
         ];
     }
 

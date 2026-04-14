@@ -15,11 +15,11 @@ export default class ModerationCommand extends ParentCommand {
 
     getChildren() {
         return [
-            new ModerationShowCommand(),
-            new ModerationEditCommand(),
-            new ModerationDeleteCommand(),
-            new ModerationListCommand(),
-            new ModerationClearCommand(),
+            new ModerationShowCommand(this),
+            new ModerationEditCommand(this),
+            new ModerationDeleteCommand(this),
+            new ModerationListCommand(this),
+            new ModerationClearCommand(this),
         ];
     }
 
