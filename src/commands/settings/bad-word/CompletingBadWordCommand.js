@@ -6,6 +6,17 @@ import BadWord from '../../../database/BadWord.js';
  * @abstract
  */
 export default class CompletingBadWordCommand extends SubCommand {
+    buildOptions(builder) {
+        builder.addIntegerOption(option => option
+            .setName('id')
+            .setDescription('The id of the bad-word you want to ' + this.getName())
+            .setMinValue(0)
+            .setRequired(true)
+            .setAutocomplete(true)
+        );
+        return super.buildOptions(builder);
+    }
+
     async complete(interaction) {
         const focussed = interaction.options.getFocused(true);
         switch (focussed.name) {

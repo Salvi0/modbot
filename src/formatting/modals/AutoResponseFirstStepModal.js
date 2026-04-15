@@ -6,7 +6,7 @@ import {toTitleCase} from "../../util/format.js";
 export default class AutoResponseFirstStepModal extends BetterModalBuilder {
     /**
      * @param {import('../../commands/SubCommand.js').default} command
-     * @param {?import('../../database/AutoResponse.js').default} existing
+     * @param {?import('../../database/ChatTriggeredFeature.js.js').default} existing
      */
     constructor(command, existing = null) {
         super();

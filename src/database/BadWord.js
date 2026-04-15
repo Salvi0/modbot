@@ -33,6 +33,11 @@ export default class BadWord extends ChatTriggeredFeature {
     ];
 
     /**
+     * @type {Punishment}
+     */
+    punishment;
+
+    /**
      * constructor - create a bad word
      * @param {import('discord.js').Snowflake} gid guild ID
      * @param {object} json options
@@ -149,6 +154,7 @@ export default class BadWord extends ChatTriggeredFeature {
      * @param {?number} priority
      * @param {?string} dm
      * @param {?boolean} enableVision
+     * @param {?number} strikeCount
      * @returns {Promise<{success:boolean, badWord: ?BadWord, message: ?string}>}
      */
     static async new(
@@ -163,6 +169,7 @@ export default class BadWord extends ChatTriggeredFeature {
         priority,
         dm,
         enableVision,
+        strikeCount,
     ) {
         let trigger = this.getTrigger(triggerType, triggerContent);
         if (!trigger.success)
@@ -170,7 +177,7 @@ export default class BadWord extends ChatTriggeredFeature {
 
         const badWord = new BadWord(guildID, {
             trigger: trigger.trigger,
-            punishment: new Punishment({action: punishment ?? 'none', duration: duration}),
+            punishment: new Punishment({action: punishment ?? 'none', duration: duration, count: strikeCount}),
             global,
             channels,
             response: response || 'disabled',

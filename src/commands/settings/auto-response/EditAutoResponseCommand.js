@@ -42,7 +42,6 @@ export default class EditAutoResponseCommand extends CompletingAutoResponseComma
     }
 
     /**
-     *
      * @param {import('discord.js').Interaction} interaction
      * @param {AutoResponse} autoResponse
      * @returns {Promise<void>}
@@ -85,7 +84,7 @@ export default class EditAutoResponseCommand extends CompletingAutoResponseComma
      * Get a confirmation from the interactions custom id
      * @param {import('discord.js').ModalSubmitInteraction|import('discord.js').ButtonInteraction} interaction
      * @param {string[]} parts
-     * @returns {Promise<?Confirmation<import('./AddAutoResponseCommand.js').AutoResponseFistStageModalData>>}
+     * @returns {Promise<?Confirmation<AutoResponseFistStageModalData>>}
      */
     async getConfirmation(interaction, parts) {
         const confirmationId = parts[3];
@@ -99,14 +98,13 @@ export default class EditAutoResponseCommand extends CompletingAutoResponseComma
     }
 
     /**
-     * Get a confirmation from the interactions custom id
      * @param {import('discord.js').ModalSubmitInteraction|import('discord.js').ButtonInteraction} interaction
      * @param {string[]} parts
      * @returns {Promise<?AutoResponse>}
      */
     async getAutoResponse(interaction, parts) {
-        const confirmationId = parts[2];
-        const response = await AutoResponse.getByID(confirmationId, interaction.guildId);
+        const id = parts[2];
+        const response = await AutoResponse.getByID(id, interaction.guildId);
 
         if (!response) {
             await interaction.reply(ErrorEmbed.message('Could not find this response.'));

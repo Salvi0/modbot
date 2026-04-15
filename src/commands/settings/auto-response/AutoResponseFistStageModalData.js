@@ -21,7 +21,7 @@ export default class AutoResponseFistStageModalData {
      * @returns {AutoResponseFistStageModalData}
      */
     static fromInteraction(interaction) {
-        const data = new AutoResponseFistStageModalData();
+        const data = new this();
         data.imageDetection = false;
         for (let label of interaction.components) {
             switch (label.component.customId) {

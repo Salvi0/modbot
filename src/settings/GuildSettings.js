@@ -29,7 +29,7 @@ import MessageBuilder from '../formatting/MessageBuilder.js';
  * @property  {import('discord.js').Snowflake}   [mutedRole]          id of the muted role
  * @property  {import('discord.js').Snowflake[]} [modRoles]           role ids that can execute commands
  * @property  {import('discord.js').Snowflake[]} [protectedRoles]     role ids that can't be targeted by moderations
- * @property  {object}                           [punishments]        automatic punishments for strikes
+ * @property  {PunishmentsJSON}                  [punishments]        automatic punishments for strikes
  * @property  {string}                           [playlist]           id of YouTube playlist for tutorials
  * @property  {string}                           [helpcenter]         subdomain of the zendesk help center
  * @property  {boolean}                          [invites]            allow invites (can be overwritten per channel)
@@ -39,6 +39,10 @@ import MessageBuilder from '../formatting/MessageBuilder.js';
  * @property  {number}                           [antiSpam]           should message spam detection be enabled
  * @property  {number}                           [similarMessages]    should similar message detection be enabled
  * @property  {?SafeSearchSettings}              [safeSearch]         safe search configuration
+ */
+
+/**
+ * @typedef {{[p: string]: {action: PunishmentAction, duration: number|string|null, count: ?number, message: ?number}}} PunishmentsJSON
  */
 
 /**
@@ -116,7 +120,7 @@ export default class GuildSettings extends Settings {
         if (json.modRoles instanceof Array)
             json.modRoles.forEach(role => this.protectedRoles.add(role));
 
-        this.#punishments = json.punishments ?? this.#punishments;
+        this.#punishments = this.#parsePunishments(json.punishments ?? this.#punishments);
     }
 
     /**
@@ -373,5 +377,22 @@ export default class GuildSettings extends Settings {
         cleanObject.protectedRoles = Array.from(this.protectedRoles);
 
         return super.getDataObject(cleanObject);
+    }
+
+    /**
+     * Parse punishment data to objects
+     * @param {PunishmentsJSON} input
+     * @returns {{[p: string]: Punishment}}
+     */
+    #parsePunishments(input) {
+        const output = {};
+        for (const [key, value] of Object.entries(input)) {
+            if (typeof value.duration === "string") {
+                output[key] = Punishment.from(value.action, value.duration, value.message);
+            } else {
+                output[key] = new Punishment(value);
+            }
+        }
+        return output;
     }
 }

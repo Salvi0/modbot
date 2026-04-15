@@ -1,20 +1,14 @@
 import Confirmation from '../../../database/Confirmation.js';
-import {parseTime, timeAfter} from '../../../util/timeutils.js';
+import {timeAfter} from '../../../util/timeutils.js';
 import ErrorEmbed from '../../../formatting/embeds/ErrorEmbed.js';
 import colors from '../../../util/colors.js';
 import BadWord from '../../../database/BadWord.js';
-import BetterModalBuilder from "../../../formatting/components/BetterModalBuilder.js";
-import TriggerTypeSelect from "../../../formatting/components/TriggerTypeSelect.js";
-import CTFCheckboxes from "../../../formatting/components/CTFCheckboxes.js";
-import PunishmentSelect from "../../../formatting/components/PunishmentSelect.js";
-import PriorityInput from "../../../formatting/components/PriorityInput.js";
 import SubCommand from "../../SubCommand.js";
-import TriggerInput from "../../../formatting/components/TriggerInput.js";
-import ResponseInput from "../../../formatting/components/ResponseInput.js";
-import ChannelsSelect from "../../../formatting/components/ChannelsSelect.js";
-import DirectMessageInput from "../../../formatting/components/DirectMessageInput.js";
-import PunishmentDurationInput from "../../../formatting/components/PunishmentDurationInput.js";
 import NextStepMessage from "../../../formatting/messages/NextStepMessage.js";
+import BadWordFirstStepModal from "../../../formatting/modals/BadWordFirstStepModal.js";
+import BadWordSecondStepModal from "../../../formatting/modals/BadWordSecondStepModal.js";
+import BadWordFirstStageModalData from "./BadWordFirstStageModalData.js";
+import BadWordSecondStageModalData from "./BadWordSecondStageModalData.js";
 
 /**
  * @typedef {object} BadWordConfirmationData
@@ -27,15 +21,7 @@ import NextStepMessage from "../../../formatting/messages/NextStepMessage.js";
 
 export default class AddBadWordCommand extends SubCommand {
     async execute(interaction) {
-        const modal = new BetterModalBuilder()
-            .setTitle("Add bad-word")
-            .setCustomId("bad-word:add")
-            .addLabelComponent(new TriggerTypeSelect())
-            .addLabelComponent(new CTFCheckboxes("bad-word"))
-            .addLabelComponent(new PunishmentSelect())
-            .addLabelComponent(new PriorityInput());
-
-        await interaction.showModal(modal);
+        await interaction.showModal(new BadWordFirstStepModal(this));
     }
 
     async executeButton(interaction) {
@@ -44,22 +30,7 @@ export default class AddBadWordCommand extends SubCommand {
             return;
         }
 
-        const modal = new BetterModalBuilder()
-            .setTitle("Add bad-word")
-            .setCustomId(interaction.customId)
-            .addLabelComponent(new TriggerInput(confirmation.data.triggerType))
-            .addLabelComponent(new ResponseInput(false))
-            .addLabelComponent(new DirectMessageInput());
-
-        if (['ban', 'mute'].includes(confirmation.data.punishment)) {
-            modal.addLabelComponent(new PunishmentDurationInput(confirmation.data.punishment));
-        }
-
-        if (!confirmation.data.global) {
-            modal.addLabelComponent(new ChannelsSelect("bad-word"));
-        }
-
-        return await interaction.showModal(modal);
+        return await interaction.showModal(new BadWordSecondStepModal(this, confirmation));
     }
 
     async executeModal(interaction) {
@@ -80,34 +51,7 @@ export default class AddBadWordCommand extends SubCommand {
      * @returns {Promise<unknown>}
      */
     async handleFirstStageModal(interaction) {
-        /** @type {BadWordConfirmationData} */
-        const confirmationData = {};
-        confirmationData.imageDetection = false;
-        confirmationData.priority = 0;
-        confirmationData.punishment = 'none';
-        for (let label of interaction.components) {
-            switch (label.component.customId) {
-                case 'trigger-type':
-                    confirmationData.triggerType = (/** @type {import('discord.js').SelectMenuModalData} */ label.component).values[0];
-                    break;
-                case CTFCheckboxes.GLOBAL_ID:
-                    confirmationData.global = (/** @type {import('discord.js').CheckboxModalData} */ label.component).value;
-                    break;
-                case CTFCheckboxes.OPTIONS_ID: {
-                    const group = /** @type {import('discord.js').CheckboxGroupModalData} */ label.component;
-                    confirmationData.global = group.values.includes(CTFCheckboxes.GLOBAL_ID);
-                    confirmationData.imageDetection = group.values.includes(CTFCheckboxes.IMAGE_DETECTION_ID);
-                    break;
-                }
-                case 'punishment':
-                    confirmationData.punishment = (/** @type {import('discord.js').SelectMenuModalData} */ label.component).values[0];
-                    break;
-                case 'priority':
-                    confirmationData.priority = parseInt((/** @type {import('discord.js').TextInputModalData} */ label.component).value);
-                    break;
-            }
-        }
-
+        const confirmationData = BadWordFirstStageModalData.fromInteraction(interaction);
         const confirmation = new Confirmation(confirmationData, timeAfter("1 hour"));
         const id = "bad-word:add:" + await confirmation.save();
         await interaction.reply(new NextStepMessage(1, 2, id));
@@ -119,48 +63,27 @@ export default class AddBadWordCommand extends SubCommand {
      * @returns {Promise<unknown>}
      */
     async handleSecondStageModal(interaction, confirmation) {
-        let trigger,
-            response = null,
-            directMessage = null,
-            duration = null,
-            channels = [];
-        for (let label of interaction.components) {
-            switch (label.component.customId) {
-                case 'trigger':
-                    trigger = (/** @type {import('discord.js').TextInputModalData} */ label.component).value;
-                    break;
-                case 'response':
-                    response = (/** @type {import('discord.js').TextInputModalData} */ label.component).value;
-                    break;
-                case 'channels':
-                    channels = (/** @type {import('discord.js').SelectMenuModalData} */ label.component).values;
-                    break;
-                case 'dm':
-                    directMessage = (/** @type {import('discord.js').TextInputModalData} */ label.component).value;
-                    break;
-                case 'duration':
-                    duration = parseTime((/** @type {import('discord.js').TextInputModalData} */ label.component).value);
-                    break;
-            }
-        }
-
         await confirmation.delete();
-        if (!trigger || (!confirmation.data.global && !channels.length)) {
+
+        const data = BadWordSecondStageModalData.fromInteraction(interaction);
+
+        if (!data.trigger || (!confirmation.data.global && !data.channels.length)) {
             return await interaction.reply(ErrorEmbed.message("Failed to parse modal data!"));
         }
 
         const result = await BadWord.new(
             interaction.guild.id,
             confirmation.data.global,
-            channels,
+            data.channels,
             confirmation.data.triggerType,
-            trigger,
-            response,
+            data.trigger,
+            data.response,
             confirmation.data.punishment,
-            duration,
+            data.duration,
             confirmation.data.priority,
-            directMessage,
+            data.directMessage,
             confirmation.data.imageDetection,
+            data.strikeCount,
         );
         if (!result.success) {
             await interaction.reply(ErrorEmbed.message(result.message));

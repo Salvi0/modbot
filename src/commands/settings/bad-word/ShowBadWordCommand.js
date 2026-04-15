@@ -4,18 +4,6 @@ import CompletingBadWordCommand from './CompletingBadWordCommand.js';
 import BadWord from '../../../database/BadWord.js';
 
 export default class ShowBadWordCommand extends CompletingBadWordCommand {
-
-    buildOptions(builder) {
-        builder.addIntegerOption(option => option
-            .setName('id')
-            .setDescription('The id of the bad-word you want to view')
-            .setMinValue(0)
-            .setRequired(true)
-            .setAutocomplete(true)
-        );
-        return super.buildOptions(builder);
-    }
-
     async execute(interaction) {
         const badWord = /** @type {?BadWord} */
             await BadWord.getByID(interaction.options.getInteger('id', true), interaction.guildId);

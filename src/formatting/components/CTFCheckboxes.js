@@ -15,7 +15,7 @@ export default class CTFCheckboxes extends LabelBuilder {
 
     /**
      * @param {import('../../commands/SubCommand.js').default} command
-     * @param {?import('../../database/AutoResponse.js').default} existing
+     * @param {?import('../../database/ChatTriggeredFeature.js').default} existing
      */
     constructor(command, existing = null) {
         super();

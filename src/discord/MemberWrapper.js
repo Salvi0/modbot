@@ -356,7 +356,7 @@ export default class MemberWrapper {
                 return this.softban(reason, comment, this.user.client.user);
 
             case 'strike':
-                return this.strike(reason, comment, this.user.client.user);
+                return this.strike(reason, comment, this.user.client.user, punishment.count ?? 1);
 
             default:
                 throw new Error(`Unknown punishment action ${punishment.action}`);

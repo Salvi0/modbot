@@ -7,9 +7,15 @@ export default class Punishment {
     action;
 
     /**
-     * @type {?number|string}
+     * @type {?number}
      */
     duration = null;
+
+    /**
+     * Number of strikes to apply if this is a strike punishment
+     * @type {?number}
+     */
+    count = null;
 
     /**
      * @type {?string}
@@ -20,12 +26,14 @@ export default class Punishment {
     /**
      * @param {object} raw
      * @param {PunishmentAction} raw.action
-     * @param {?number|string} [raw.duration]
+     * @param {?number} [raw.duration] Duration in seconds if this is a ban or mute
+     * @param {?number} [raw.count] number of strikes to apply if this is a strike punishment
      * @param {?string} [raw.message]
      */
     constructor(raw) {
         this.action = raw.action;
         this.duration = raw.duration ?? null;
+        this.count = raw.count ?? null;
         this.message = raw.message ?? null;
     }
 

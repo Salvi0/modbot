@@ -36,6 +36,7 @@ export default class SetPunishmentsCommand extends SubCommand {
 
     async execute(interaction) {
         const count = interaction.options.getInteger('strike-count', true),
+            /** @type {import('../../../database/Punishment.js').PunishmentAction} */
             action = interaction.options.getString('punishment', true),
             guildSettings = await GuildSettings.get(interaction.guildId);
 
@@ -51,7 +52,7 @@ export default class SetPunishmentsCommand extends SubCommand {
         await guildSettings.setPunishment(count, new Punishment({
             action,
             count,
-            duration
+            duration,
         }));
         await interaction.reply(new EmbedWrapper()
             .setDescription(`Set punishment for ${count} ${count === 1 ? 'strike': 'strikes'} to ${action}${duration ? ` for ${formatTime(duration)}` : ''}.`)

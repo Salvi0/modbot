@@ -3,7 +3,7 @@ import BetterStringSelectMenuBuilder from "./BetterStringSelectMenuBuilder.js";
 
 export default class TriggerTypeSelect extends LabelBuilder {
     /**
-     * @param {?import('../../database/AutoResponse.js').default} existing
+     * @param {?import('../../database/ChatTriggeredFeature.js').default} existing
      */
     constructor(existing) {
         super();
@@ -32,19 +32,19 @@ export default class TriggerTypeSelect extends LabelBuilder {
             }
         ];
 
-        let description = "The kind of trigger";
         const select = new BetterStringSelectMenuBuilder()
             .setCustomId("trigger-type");
+        const defaultOption = existing?.trigger?.type ?? "include";
 
         for (const option of options) {
-            select.addOption(option);
-            if (option.value === existing?.trigger?.type) {
-                description += ". The previous value was " + option.label + ".";
+            if (option.value === defaultOption) {
+                option.default = true;
             }
+            select.addOption(option);
         }
 
         this.setLabel('Trigger Type')
-            .setDescription(description)
+            .setDescription("The kind of trigger")
             .setStringSelectMenuComponent(select);
     }
 }
