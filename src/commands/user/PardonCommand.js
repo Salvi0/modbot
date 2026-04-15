@@ -1,9 +1,4 @@
-import {
-    bold, escapeMarkdown,
-    ModalBuilder,
-    PermissionFlagsBits,
-    PermissionsBitField
-} from 'discord.js';
+import {bold, escapeMarkdown, PermissionFlagsBits, PermissionsBitField} from 'discord.js';
 import MemberWrapper from '../../discord/MemberWrapper.js';
 import colors from '../../util/colors.js';
 import {MODAL_TITLE_LIMIT} from '../../util/apiLimits.js';
@@ -12,9 +7,10 @@ import EmbedWrapper from '../../formatting/embeds/EmbedWrapper.js';
 import {formatNumber, inlineEmojiIfExists} from '../../util/format.js';
 import {deferReplyOnce, replyOrEdit} from '../../util/interaction.js';
 import UserCommand from './UserCommand.js';
-import ReasonInput from '../../modals/inputs/ReasonInput.js';
-import CommentInput from '../../modals/inputs/CommentInput.js';
-import CountInput from '../../modals/inputs/CountInput.js';
+import ReasonInput from "../../formatting/components/ReasonInput.js";
+import CommentInput from "../../formatting/components/CommentInput.js";
+import BetterModalBuilder from "../../formatting/components/BetterModalBuilder.js";
+import StrikeCountInput from "../../formatting/components/StrikeCountInput.js";
 
 export default class PardonCommand extends UserCommand {
 
@@ -96,31 +92,28 @@ export default class PardonCommand extends UserCommand {
             return;
         }
 
-        await interaction.showModal(new ModalBuilder()
+        await interaction.showModal(new BetterModalBuilder()
             .setTitle(`Pardon ${await member.displayName()}`.substring(0, MODAL_TITLE_LIMIT))
             .setCustomId(`pardon:${member.user.id}`)
-            .addComponents(
-                new ReasonInput().toActionRow(),
-                new CommentInput().toActionRow(),
-                new CountInput().toActionRow(),
-            ));
+            .addLabelComponent(new ReasonInput(this))
+            .addLabelComponent(new CommentInput(this))
+            .addLabelComponent(new StrikeCountInput("Number of strikes you want to pardon."))
+        );
     }
 
     async executeModal(interaction) {
         let reason, comment, count;
-        for (const row of interaction.components) {
-            for (const component of row.components) {
-                switch (component.customId) {
-                    case 'reason':
-                        reason = component.value || 'No reason provided';
-                        break;
-                    case 'comment':
-                        comment = component.value || null;
-                        break;
-                    case 'count':
-                        count = parseInt(component.value);
-                        break;
-                }
+        for (let label of interaction.components) {
+            switch (label.component.customId) {
+                case 'reason':
+                    reason = label.component.value || 'No reason provided';
+                    break;
+                case 'comment':
+                    comment = label.component.value || null;
+                    break;
+                case 'count':
+                    count = parseInt(label.component.value);
+                    break;
             }
         }
 

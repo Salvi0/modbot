@@ -1,6 +1,6 @@
 import AutoResponseSecondStepModal from "./AutoResponseSecondStepModal.js";
 import DirectMessageInput from "../components/DirectMessageInput.js";
-import PunishmentDurationInput from "../components/PunishmentDurationInput.js";
+import DurationInput from "../components/DurationInput.js";
 import StrikeCountInput from "../components/StrikeCountInput.js";
 
 export default class BadWordSecondStepModal extends AutoResponseSecondStepModal {
@@ -15,9 +15,9 @@ export default class BadWordSecondStepModal extends AutoResponseSecondStepModal 
 
 
         if (['ban', 'mute'].includes(confirmation.data.punishment)) {
-            this.addLabelComponent(new PunishmentDurationInput(confirmation.data.punishment, existing));
+            this.addLabelComponent(new DurationInput(confirmation.data.punishment, existing));
         } else if (confirmation.data.punishment === 'strike') {
-            this.addLabelComponent(new StrikeCountInput(existing));
+            this.addLabelComponent(new StrikeCountInput("Number of strikes the user should receive when triggering this bad word.", existing?.punishment?.count));
         }
     }
 

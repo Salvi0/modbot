@@ -1,8 +1,4 @@
-import {
-    ModalBuilder,
-    PermissionFlagsBits,
-    PermissionsBitField,
-} from 'discord.js';
+import {PermissionFlagsBits, PermissionsBitField,} from 'discord.js';
 import MemberWrapper from '../../discord/MemberWrapper.js';
 import colors from '../../util/colors.js';
 import {MODAL_TITLE_LIMIT} from '../../util/apiLimits.js';
@@ -11,8 +7,9 @@ import Confirmation from '../../database/Confirmation.js';
 import UserActionEmbed from '../../formatting/embeds/UserActionEmbed.js';
 import config from '../../bot/Config.js';
 import {deferReplyOnce, replyOrEdit} from '../../util/interaction.js';
-import ReasonInput from '../../modals/inputs/ReasonInput.js';
-import CommentInput from '../../modals/inputs/CommentInput.js';
+import ReasonInput from "../../formatting/components/ReasonInput.js";
+import CommentInput from "../../formatting/components/CommentInput.js";
+import BetterModalBuilder from "../../formatting/components/BetterModalBuilder.js";
 
 /**
  * @import {ConfirmationData} from './UserCommand.js';
@@ -102,27 +99,24 @@ export default class KickCommand extends UserCommand {
             return;
         }
 
-        await interaction.showModal(new ModalBuilder()
+        await interaction.showModal(new BetterModalBuilder()
             .setTitle(`Kick ${await member.displayName()}`.substring(0, MODAL_TITLE_LIMIT))
             .setCustomId(`kick:${member.user.id}`)
-            .addComponents(
-                new ReasonInput().toActionRow(),
-                new CommentInput().toActionRow(),
-            ));
+            .addLabelComponent(new ReasonInput(this))
+            .addLabelComponent(new CommentInput(this))
+        );
     }
 
     async executeModal(interaction) {
         let reason, comment;
-        for (const row of interaction.components) {
-            for (const component of row.components) {
-                switch (component.customId) {
-                    case 'reason':
-                        reason = component.value || 'No reason provided';
-                        break;
-                    case 'comment':
-                        comment = component.value || null;
-                        break;
-                }
+        for (let label of interaction.components) {
+            switch (label.component.customId) {
+                case 'reason':
+                    reason = label.component.value || 'No reason provided';
+                    break;
+                case 'comment':
+                    comment = label.component.value || null;
+                    break;
             }
         }
 

@@ -1,7 +1,8 @@
 import {LabelBuilder, TextInputBuilder, TextInputStyle} from "discord.js";
 import {formatTime} from "../../util/timeutils.js";
+import {toTitleCase} from "../../util/format.js";
 
-export default class PunishmentDurationInput extends LabelBuilder {
+export default class DurationInput extends LabelBuilder {
     /**
      * @param {string} punishment
      * @param {?import('../../database/BadWord.js').default} existing
@@ -13,7 +14,7 @@ export default class PunishmentDurationInput extends LabelBuilder {
             .setRequired(false)
             .setCustomId('duration')
             .setStyle(TextInputStyle.Short)
-            .setPlaceholder('Punishment duration')
+            .setPlaceholder('infinite')
             .setMinLength(2)
             .setMaxLength(4000);
 
@@ -21,8 +22,8 @@ export default class PunishmentDurationInput extends LabelBuilder {
             input.setValue(formatTime(existing.punishment.duration));
         }
 
-        this.setLabel("Punishment Duration")
-            .setDescription("Duration of the " + punishment)
+        this.setLabel(toTitleCase(punishment + " Duration"))
+            .setDescription("Duration of the " + punishment + ". Leave empty for infinite duration.")
             .setTextInputComponent(input);
     }
 }

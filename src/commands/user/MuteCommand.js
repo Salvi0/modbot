@@ -1,8 +1,4 @@
-import {
-    ModalBuilder,
-    PermissionFlagsBits,
-    PermissionsBitField,
-} from 'discord.js';
+import {PermissionFlagsBits, PermissionsBitField,} from 'discord.js';
 import MemberWrapper from '../../discord/MemberWrapper.js';
 import {formatTime, parseTime} from '../../util/timeutils.js';
 import colors from '../../util/colors.js';
@@ -13,9 +9,10 @@ import ErrorEmbed from '../../formatting/embeds/ErrorEmbed.js';
 import UserActionEmbed from '../../formatting/embeds/UserActionEmbed.js';
 import config from '../../bot/Config.js';
 import {deferReplyOnce, replyOrEdit} from '../../util/interaction.js';
-import ReasonInput from '../../modals/inputs/ReasonInput.js';
-import CommentInput from '../../modals/inputs/CommentInput.js';
-import DurationInput from '../../modals/inputs/DurationInput.js';
+import ReasonInput from "../../formatting/components/ReasonInput.js";
+import CommentInput from "../../formatting/components/CommentInput.js";
+import DurationInput from "../../formatting/components/DurationInput.js";
+import BetterModalBuilder from "../../formatting/components/BetterModalBuilder.js";
 
 /**
  * @import {DurationConfirmationData} from './UserCommand.js';
@@ -137,31 +134,28 @@ export default class MuteCommand extends UserCommand {
             return;
         }
 
-        await interaction.showModal(new ModalBuilder()
+        await interaction.showModal(new BetterModalBuilder()
             .setTitle(`Mute ${await member.displayName()}`.substring(0, MODAL_TITLE_LIMIT))
             .setCustomId(`mute:${member.user.id}`)
-            .addComponents(
-                new ReasonInput().toActionRow(),
-                new CommentInput().toActionRow(),
-                new DurationInput().toActionRow(),
-            ));
+            .addLabelComponent(new ReasonInput(this))
+            .addLabelComponent(new CommentInput(this))
+            .addLabelComponent(new DurationInput(this.getName()))
+        );
     }
 
     async executeModal(interaction) {
         let reason, duration, comment;
-        for (const row of interaction.components) {
-            for (const component of row.components) {
-                switch (component.customId) {
-                    case 'reason':
-                        reason = component.value || 'No reason provided';
-                        break;
-                    case 'comment':
-                        comment = component.value || null;
-                        break;
-                    case 'duration':
-                        duration = parseTime(component.value);
-                        break;
-                }
+        for (let label of interaction.components) {
+            switch (label.component.customId) {
+                case 'reason':
+                    reason = label.component.value || 'No reason provided';
+                    break;
+                case 'comment':
+                    comment = label.component.value || null;
+                    break;
+                case 'duration':
+                    duration = parseTime(label.component.value);
+                    break;
             }
         }
 

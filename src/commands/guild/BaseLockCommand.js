@@ -1,12 +1,13 @@
 import Command from '../Command.js';
 import {
+    channelMention,
+    EmbedBuilder,
     LabelBuilder,
-    ModalBuilder,
+    MessageFlags,
     PermissionFlagsBits,
     PermissionsBitField,
     TextInputBuilder,
     TextInputStyle,
-    EmbedBuilder, MessageFlags, channelMention,
 } from 'discord.js';
 import ChannelWrapper from '../../discord/ChannelWrapper.js';
 import ErrorEmbed from '../../formatting/embeds/ErrorEmbed.js';
@@ -14,6 +15,7 @@ import {channelSelectMenu} from '../../util/channels.js';
 import Confirmation from '../../database/Confirmation.js';
 import {timeAfter} from '../../util/timeutils.js';
 import ChannelSettings from '../../settings/ChannelSettings.js';
+import BetterModalBuilder from "../../formatting/components/BetterModalBuilder.js";
 
 /**
  * @typedef {object} ComponentStrings
@@ -56,12 +58,12 @@ export default class BaseLockCommand extends Command {
             return;
         }
 
-        const modal = new ModalBuilder()
+        const modal = new BetterModalBuilder()
             .setTitle(this.#getString('modal_title'));
 
         const global = interaction.options.getBoolean('global');
         if (!global) {
-            modal.addLabelComponents(
+            modal.addLabelComponent(
                 new LabelBuilder()
                     .setLabel('Channels')
                     .setDescription(this.#getString('modal_channels_description'))
@@ -69,7 +71,7 @@ export default class BaseLockCommand extends Command {
             );
         }
 
-        modal.addLabelComponents(
+        modal.addLabelComponent(
             new LabelBuilder()
                 .setLabel('Lock message')
                 .setDescription(this.#getString('modal_message_description'))
