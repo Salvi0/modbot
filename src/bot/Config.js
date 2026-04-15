@@ -103,7 +103,7 @@ export class Config {
         }
 
         /** @type {DatabaseConfig} */
-        let database = await this.#get('database', null, this.#parseBase64Json);
+        let database = await this.#get('database', {}, this.#parseBase64Json);
         database.host ??= await this.#get(['database', 'host']);
         database.user ??= await this.#get(['database', 'user'], "modbot");
         database.password ??= await this.#get(['database', 'password']);
