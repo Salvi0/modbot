@@ -23,10 +23,10 @@
     "node": ">=22.0.0"
   },
   "dependencies": {
-    "@google-cloud/logging": "^11.2.1",
+    "@google-cloud/logging": "^12.0.0",
     "@google-cloud/vision": "^5.3.3",
-    "@googleapis/youtube": "^31.0.0",
-    "diff": "^8.0.2",
+    "@googleapis/youtube": "^34.0.0",
+    "diff": "^9.0.0",
     "discord-api-types": "^0.38.45",
     "discord.js": "^14.26.2",
     "fuse.js": "^7.0.0",
@@ -37,11 +37,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@eslint/json": "^1.2.0",
+    "@eslint/json": "^2.0.1",
     "@types/node": "^22.5.2",
     "@types/turndown": "^5.0.6",
     "eslint": "^10.2.0",
-    "eslint-plugin-jsdoc": "^62.9.0",
+    "eslint-plugin-jsdoc": "^64.0.2",
     "globals": "^17.4.0",
     "nodemon": "^3.1.10"
   },
