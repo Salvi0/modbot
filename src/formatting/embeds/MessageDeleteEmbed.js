@@ -58,7 +58,17 @@ export default class MessageDeleteEmbed extends EmbedWrapper {
                 missingAttachments++;
             }
         }
-        embed.setFooter({text: embed.data.footer.text + "\n" + `Missing Attachments: ${missingAttachments}`});
+        if (missingAttachments) {
+            let footerText = embed.data.footer?.text ?? "";
+            if (footerText) {
+                footerText += "\n";
+            }
+            footerText += `Missing Attachments: ${missingAttachments}`;
+            embed.setFooter({
+                text: footerText,
+                iconURL: embed.data.footer.icon_url,
+            });
+        }
         return embed;
     }
 
