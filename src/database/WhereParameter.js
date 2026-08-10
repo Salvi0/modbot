@@ -7,12 +7,20 @@ export default class WhereParameter {
      */
     #comparator;
 
+    /**
+     * @param {string} field
+     * @param {string|number|Array<string|number>} value
+     * @param {string} [comparator]
+     */
     constructor(field, value, comparator = '=') {
         this.field = field;
         this.value = value;
         this.#comparator = comparator;
     }
 
+    /**
+     * @returns {Promise<string>}
+     */
     get escapedField() {
         return database.escapeId(this.field);
     }
@@ -29,7 +37,11 @@ export default class WhereParameter {
         }
     }
 
-    toString() {
-        return `${this.escapedField} ${this.comparator} ${this.placeholder}`;
+    /**
+     * Format the where parameter for use in a query
+     * @returns {Promise<string>}
+     */
+    async format() {
+        return `${await this.escapedField} ${this.comparator} ${this.placeholder}`;
     }
 }

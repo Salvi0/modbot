@@ -158,7 +158,7 @@ export default class ChatTriggeredFeature {
 
     /**
      * get escaped table name
-     * @returns {string}
+     * @returns {Promise<string>}
      */
     static get escapedTableName() {
         return database.escapeId(this.tableName);
@@ -214,19 +214,19 @@ export default class ChatTriggeredFeature {
                 columns = this.constructor.columns,
                 data = this.serialize();
             for (const column of columns) {
-                assignments.push(`${database.escapeId(column)}=?`);
+                assignments.push(`${await database.escapeId(column)}=?`);
             }
             if (data.length !== columns.length) throw new Error('Unable to update, lengths differ!');
             data.push(this.id);
-            await database.queryAll(`UPDATE ${this.constructor.escapedTableName}
+            await database.queryAll(`UPDATE ${await this.constructor.escapedTableName}
                                      SET ${assignments.join(', ')}
                                      WHERE id = ?`, ...data);
         } else {
-            const columns = database.escapeId(this.constructor.columns);
+            const columns = await database.escapeId(this.constructor.columns);
             const values = ',?'.repeat(this.constructor.columns.length).slice(1);
             /** @property {number} insertId*/
             const dbEntry = await database.queryAll(
-                `INSERT INTO ${this.constructor.escapedTableName} (${columns})
+                `INSERT INTO ${await this.constructor.escapedTableName} (${columns})
                  VALUES (${values})`, ...this.serialize());
             this.id = dbEntry.insertId;
         }
@@ -250,7 +250,7 @@ export default class ChatTriggeredFeature {
      * @returns {Promise<void>}
      */
     async delete() {
-        await database.query(`DELETE FROM ${this.constructor.escapedTableName} WHERE id = ?`, [this.id]);
+        await database.query(`DELETE FROM ${await this.constructor.escapedTableName} WHERE id = ?`, [this.id]);
 
         if (this.global) {
             if (this.constructor.getGuildCache().has(this.gid))
@@ -286,7 +286,7 @@ export default class ChatTriggeredFeature {
      */
     static async getByID(id, guildid) {
         const result = await database.query(`SELECT *
-                                             FROM ${this.escapedTableName}
+                                             FROM ${await this.escapedTableName}
                                              WHERE id = ?
                                                AND guildid = ?`, id, guildid);
         if (!result) return null;
@@ -356,7 +356,7 @@ export default class ChatTriggeredFeature {
     static async getAll(guildId) {
         const result = await database.queryAll(
             `SELECT *
-             FROM ${this.escapedTableName}
+             FROM ${await this.escapedTableName}
              WHERE guildid = ?`, [guildId]);
 
         const collection = new Collection();
@@ -375,7 +375,7 @@ export default class ChatTriggeredFeature {
     static async refreshGuild(guildId) {
         const result = await database.queryAll(
             `SELECT *
-             FROM ${this.escapedTableName}
+             FROM ${await this.escapedTableName}
              WHERE guildid = ?
                AND global = TRUE`, [guildId]);
 
@@ -397,7 +397,7 @@ export default class ChatTriggeredFeature {
     static async refreshChannel(channelId) {
         const result = await database.queryAll(
             `SELECT *
-             FROM ${this.escapedTableName}
+             FROM ${await this.escapedTableName}
              WHERE channels LIKE ?`, [`%${channelId}%`]);
 
         const newItems = new Collection();

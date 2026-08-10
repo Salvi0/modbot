@@ -102,7 +102,7 @@ export default class Moderation {
         this.guildid = data.guildid;
         this.userid = data.userid;
         this.action = data.action;
-        this.created = parseInt(data.created) || Math.floor(Date.now()/1000);
+        this.created = parseInt(data.created) || Math.floor(Date.now() / 1000);
         this.value = data.value;
         this.reason = data.reason || 'No reason provided.';
         this.comment = data.comment;
@@ -122,22 +122,33 @@ export default class Moderation {
         TypeChecker.assertString(data.guildid, 'Guild ID');
         TypeChecker.assertString(data.userid, 'User ID');
         TypeChecker.assertString(data.action, 'Action');
-        TypeChecker.assertOfTypes(data.created, ['number','string','undefined'], 'Created', true);
+        TypeChecker.assertOfTypes(data.created, ['number', 'string', 'undefined'], 'Created', true);
         TypeChecker.assertNumberUndefinedOrNull(data.value, 'Value');
         TypeChecker.assertStringUndefinedOrNull(data.reason, 'Reason');
         TypeChecker.assertStringUndefinedOrNull(data.comment, 'Comment');
-        TypeChecker.assertOfTypes(data.expireTime, ['number','string','undefined'], 'Expire time', true);
+        TypeChecker.assertOfTypes(data.expireTime, ['number', 'string', 'undefined'], 'Expire time', true);
         TypeChecker.assertStringUndefinedOrNull(data.moderator, 'Moderator');
         TypeChecker.assertOfTypes(data.active, ['boolean', 'undefined'], 'Active');
     }
 
     /**
      * escaped database fields
-     * @returns {string[]}
+     * @returns {Promise<string[]>}
      */
-    static getFields() {
-        return ['id', 'guildid', 'userid', 'action', 'created', 'value', 'expireTime', 'reason', 'comment', 'moderator', 'active']
-            .map(field => database.escapeId(field));
+    static async getFields() {
+        return await Promise.all([
+            'id',
+            'guildid',
+            'userid',
+            'action',
+            'created',
+            'value',
+            'expireTime',
+            'reason',
+            'comment',
+            'moderator',
+            'active',
+        ].map(field => database.escapeId(field)));
     }
 
     /**
@@ -148,11 +159,20 @@ export default class Moderation {
      * @returns {Promise<Moderation[]>}
      */
     static async select(params, limit = null, sortAscending = true) {
-        const where = params.join(' AND ');
+        let where = "";
+        for (const [i, param] of params.entries()) {
+            if (i !== 0) {
+                where += " AND ";
+            }
+            where += await param.format();
+        }
         const values = params.map(p => p.value);
-        const fields = this.getFields().join(', ');
+        const fields = (await this.getFields()).join(', ');
 
-        let query = `SELECT ${fields} FROM moderations WHERE ${where} ORDER BY created ${sortAscending ? 'ASC' : 'DESC'}`;
+        let query = `SELECT ${fields}
+                     FROM moderations
+                     WHERE ${where}
+                     ORDER BY created ${sortAscending ? 'ASC' : 'DESC'}`;
         if (limit) {
             query += ' LIMIT ?';
             values.push(limit);
@@ -197,7 +217,7 @@ export default class Moderation {
      * @returns {Promise}
      */
     static async bulkSave(moderations) {
-        if(!Array.isArray(moderations) || !moderations.length) {
+        if (!Array.isArray(moderations) || !moderations.length) {
             return;
         }
         let data = moderations.map(m => m.getParameters());
@@ -206,8 +226,8 @@ export default class Moderation {
         while (data.length) {
             const current = data.slice(0, 100);
             data = data.slice(100);
-            queries.push(database.queryAll(`INSERT INTO moderations (${this.getFields().slice(1)}) ` +
-                `VALUES ${'(?,?,?,?,?,?,?,?,?), '.repeat(current.length).slice(0, - 2)}`, ...current.flat()));
+            queries.push(database.queryAll(`INSERT INTO moderations (${(await this.getFields()).slice(1)}) ` +
+                `VALUES ${'(?,?,?,?,?,?,?,?,?), '.repeat(current.length).slice(0, -2)}`, ...current.flat()));
         }
         await Promise.all(queries);
     }
@@ -226,15 +246,17 @@ export default class Moderation {
      * @returns {Promise<number>}
      */
     async save() {
-        const fields = this.constructor.getFields().slice(1);
+        const fields = (await this.constructor.getFields()).slice(1);
         if (this.id) {
             await database.query(
-                `UPDATE moderations SET ${fields.map(field => `${field} = ?`).join(', ')} WHERE id = ?`,
+                `UPDATE moderations
+                 SET ${fields.map(field => `${field} = ?`).join(', ')}
+                 WHERE id = ?`,
                 ...this.getParameters(), this.id);
-        }
-        else {
+        } else {
             const result = await database.queryAll(
-                `INSERT INTO moderations (${fields.join(', ')}) VALUES (${fields.map(() => '?').join(', ')})`,
+                `INSERT INTO moderations (${fields.join(', ')})
+                 VALUES (${fields.map(() => '?').join(', ')})`,
                 ...this.getParameters());
             this.id = result.insertId;
         }

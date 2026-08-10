@@ -44,7 +44,9 @@ WHERE
     }
 
     async run() {
-        await this.database.query(`CREATE INDEX ${this.database.escapeId(this.#indexName)}
-ON ${this.database.escapeId(this.#table)} (${this.#columns.map(c => this.database.escapeId(c)).join(`, `)})`);
+        const indexName = await this.database.escapeId(this.#indexName);
+        const tableName = await this.database.escapeId(this.#table);
+        const columns = await Promise.all(this.#columns.map(c => this.database.escapeId(c)));
+        await this.database.query(`CREATE INDEX ${indexName} ON ${tableName} (${columns.join(`, `)})`);
     }
 }

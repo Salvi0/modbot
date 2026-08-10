@@ -177,10 +177,12 @@ export class Database {
 
     /**
      * Escape table/column names
-     * @param {string|string[]} ids
-     * @returns {string}
+     * @template T {string|string[]}
+     * @param {T} ids
+     * @returns {Promise<T>}
      */
-    escapeId(ids) {
+    async escapeId(ids) {
+        await this.waitForConnection();
         return this.#connection.escapeId(ids);
     }
 }

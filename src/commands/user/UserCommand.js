@@ -182,7 +182,7 @@ export default class UserCommand extends Command {
         const options = await database.queryAll(`
 SELECT value, COUNT(*) AS count
 FROM (
-  SELECT ${database.escapeId(column)} AS value
+  SELECT ${await database.escapeId(column)} AS value
   FROM moderations
   WHERE moderator = ? AND guildid = ? AND action = ?
   ORDER BY created DESC

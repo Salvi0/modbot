@@ -73,7 +73,7 @@ export default class Settings {
 
     /**
      * get the escaped table name
-     * @returns {string}
+     * @returns {Promise<string>}
      */
     static get escapedTableName() {
         return database.escapeId(this.tableName);
@@ -119,7 +119,7 @@ export default class Settings {
      * @private
      */
     static async _select(key) {
-        return database.query(`SELECT id, config FROM ${this.escapedTableName} WHERE id = ?`, key);
+        return database.query(`SELECT id, config FROM ${await this.escapedTableName} WHERE id = ?`, key);
     }
 
     /**
@@ -138,7 +138,7 @@ export default class Settings {
      */
     async _update() {
         return database.query(
-            `UPDATE ${this.constructor.escapedTableName} SET config = ? WHERE id = ?`, this.toJSONString(), this.id);
+            `UPDATE ${await this.constructor.escapedTableName} SET config = ? WHERE id = ?`, this.toJSONString(), this.id);
     }
 
     /**
@@ -148,7 +148,7 @@ export default class Settings {
      */
     async insert() {
         return database.query(
-            `INSERT INTO ${this.constructor.escapedTableName} (config,id) VALUES (?,?)`, this.toJSONString(), this.id);
+            `INSERT INTO ${await this.constructor.escapedTableName} (config,id) VALUES (?,?)`, this.toJSONString(), this.id);
     }
 
     /**
