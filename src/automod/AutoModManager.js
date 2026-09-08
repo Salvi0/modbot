@@ -358,7 +358,7 @@ export class AutoModManager {
 
         RepeatedMessage.add(message);
         if (guildSettings.antiSpam !== -1 && await RepeatedMessage.checkSpam(message, guildSettings.antiSpam, this.#RESPONSE_TIMEOUT)) {
-            return await this.#deleteAndWarn(message, 'Sending messages to quickly', 'Slow down, you\'re sending messages to quickly!');
+            return await this.#deleteAndWarn(message, 'Sending messages too quickly', 'Slow down, you\'re sending messages to quickly!');
         }
         else if (guildSettings.similarMessages !== -1 && await RepeatedMessage.checkSimilar(message, guildSettings.similarMessages, this.#RESPONSE_TIMEOUT)) {
             return await this.#deleteAndWarn(message, 'Repeating messages', 'Stop repeating your messages!');
